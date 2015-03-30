@@ -492,7 +492,10 @@ public class YaVersion {
   // For CAMERA_COMPONENT_VERSION 2:
   // - The UseFront property was added.
    public static final int CAMERA_COMPONENT_VERSION = 2;
-
+  
+  
+   public static final int CAMERA_PLUS_COMPONENT_VERSION = 1;
+   
   // For CANVAS_COMPONENT_VERSION 2:
   // - The LineWidth property was added.
   // For CANVAS_COMPONENT_VERSION 3:
