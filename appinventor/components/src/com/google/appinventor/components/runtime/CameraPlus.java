@@ -3,19 +3,18 @@ package com.google.appinventor.components.runtime;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.OutputStream;
 import java.util.Date;
 
 import android.content.ContentResolver;
-import android.content.ContentValues;
 import android.content.Context;
 import android.content.pm.PackageManager;
+import android.graphics.SurfaceTexture;
 import android.hardware.Camera;
 import android.hardware.Camera.CameraInfo;
 import android.hardware.Camera.PictureCallback;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Environment;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.SurfaceHolder;
 import android.view.SurfaceView;
@@ -47,13 +46,11 @@ iconName = "images/camera.png")
 @SimpleObject
 @UsesPermissions(permissionNames = "android.permission.CAMERA,android.hardware.CAMERA,android.permission.WRITE_EXTERNAL_STORAGE")
 public class CameraPlus extends AndroidNonvisibleComponent implements Component, SurfaceHolder.Callback {
-  private static final String CAMERA_INTENT = "android.media.action.IMAGE_CAPTURE";
-  private static final String CAMERA_OUTPUT = "output";
   
   private final ComponentContainer container;
-  private SurfaceView liveFeed; // This should be used more effectively in the future, when someday Canvas grows.. 
+  private SurfaceView liveFeedView; // This should be used more effectively in the future, when someday Canvas grows.. 
+  //private SurfaceTexture liveFeedTexture; // This is for redirecting Camera Preview to a non View 
   private Uri imageFile;
-  private Uri mSaveUri;
   private ContentResolver mContentResolver;
   private static int mCameraId;
   private static Camera mCamera;
@@ -67,8 +64,13 @@ public class CameraPlus extends AndroidNonvisibleComponent implements Component,
     super(container.$form());
     this.container = container;
     mContentResolver = form.getContentResolver();
-    if(liveFeed==null) liveFeed=new SurfaceView(form.$context());
-    liveFeed.getHolder().addCallback(this);
+    if(Build.VERSION.SDK_INT<11){
+      if(liveFeedView==null) liveFeedView=new SurfaceView(form.$context());
+      liveFeedView.getHolder().addCallback(this);
+    }
+    else {
+     // liveFeedTexture = new SurfaceTexture(10);
+    }
     // Default property values
     UseFront(false);
   }
@@ -125,22 +127,28 @@ public class CameraPlus extends AndroidNonvisibleComponent implements Component,
         + ".jpg"));
 
            
-      
+      if(mCamera!=null) {mCamera.stopPreview();mCamera.release();mCamera=null;}
       mCameraId=getCameraId();
-      //Toast.makeText(form.$context() , "Camera Id "+mCameraId, Toast.LENGTH_SHORT).show();
+      Toast.makeText(form.$context() , "Camera Id "+mCameraId, Toast.LENGTH_SHORT).show();
       
       mCamera = getCameraInstance();
       if(mCamera==null)return;
       try {
-          mCamera.setPreviewDisplay(liveFeed.getHolder());
+        if(Build.VERSION.SDK_INT<11){
+          mCamera.setPreviewDisplay(liveFeedView.getHolder());
+        }
+        else{
+         // mCamera.setPreviewTexture(liveFeedTexture);
+          mCamera.setPreviewTexture(new SurfaceTexture(10));
+        }
       } catch (IOException e) {
           // TODO Auto-generated catch block
           e.printStackTrace();
       }
       mCamera.startPreview();
-     // Toast.makeText(form.$context() , "Camera Preview Start ", Toast.LENGTH_SHORT).show();
+      Toast.makeText(form.$context() , "Camera Preview Start ", Toast.LENGTH_SHORT).show();
       mCamera.takePicture(null,null,jpegCallback);
-     // Toast.makeText(form.$context() , "Camera Reserved  Start ", Toast.LENGTH_SHORT).show();
+      Toast.makeText(form.$context() , "Camera Reserved  Start ", Toast.LENGTH_SHORT).show();
       
       //container.$context().startActivityForResult(intent, requestCode);
     } else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)) {
@@ -190,7 +198,7 @@ public class CameraPlus extends AndroidNonvisibleComponent implements Component,
   private int getCameraId(){
     int cameraId=-1;
     int cameraCount= Camera.getNumberOfCameras();
-    //Toast.makeText(form.$context() , "No Cameras " + cameraCount, Toast.LENGTH_SHORT).show();
+    Toast.makeText(form.$context() , "No Cameras " + cameraCount, Toast.LENGTH_SHORT).show();
     CameraInfo cameraInfo = new CameraInfo();
     for(int cId=0; cId<cameraCount; cId++){
       Camera.getCameraInfo(cId, cameraInfo);
@@ -221,7 +229,7 @@ public class CameraPlus extends AndroidNonvisibleComponent implements Component,
             mCamera.stopPreview();
             mCamera.release();
             mCamera = null;
-            //Toast.makeText(form.$context(), "Camera Done",Toast.LENGTH_LONG).show();
+            Toast.makeText(form.$context(), "Camera Done",Toast.LENGTH_LONG).show();
         }
         
     }
