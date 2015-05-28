@@ -19,13 +19,18 @@ import com.google.appinventor.components.common.ComponentConstants;
 import com.google.appinventor.components.common.PropertyTypeConstants;
 import com.google.appinventor.components.common.YaVersion;
 import com.google.appinventor.components.runtime.util.BoundingBox;
+import com.google.appinventor.components.runtime.util.EclairUtil;
 import com.google.appinventor.components.runtime.util.ErrorMessages;
 import com.google.appinventor.components.runtime.util.FileUtil;
+import com.google.appinventor.components.runtime.util.FroyoUtil;
+import com.google.appinventor.components.runtime.util.GingerbreadUtil;
 import com.google.appinventor.components.runtime.util.MediaUtil;
 import com.google.appinventor.components.runtime.util.PaintUtil;
+import com.google.appinventor.components.runtime.util.SdkLevel;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -33,10 +38,19 @@ import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.BitmapDrawable;
+import android.hardware.Camera;
+import android.hardware.Camera.CameraInfo;
+import android.hardware.Camera.PictureCallback;
+import android.net.Uri;
+import android.os.Environment;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
+import android.view.Surface;
+import android.view.SurfaceHolder;
+import android.view.SurfaceHolder.Callback;
+import android.view.SurfaceView;
 import android.view.View;
 
 import java.io.File;
@@ -44,6 +58,7 @@ import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
@@ -89,8 +104,9 @@ import java.util.List;
     category = ComponentCategory.ANIMATION)
 @SimpleObject
 @UsesPermissions(permissionNames = "android.permission.INTERNET," +
+				 "android.permission.CAMERA," +
                  "android.permission.WRITE_EXTERNAL_STORAGE")
-public final class Canvas extends AndroidViewComponent implements ComponentContainer {
+public final class Canvas extends AndroidViewComponent implements ComponentContainer, OnStopListener, OnResumeListener, OnPauseListener,OnDestroyListener, Deleteable {
   private static final String LOG_TAG = "Canvas";
 
   private final Activity context;
@@ -99,14 +115,24 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
   // Android can't correctly give the width and height of a canvas until
   // something has been drawn on it.
   private boolean drawn;
-
+  
+  //Canvas Camera Management
+  private boolean surfaceCreated = false;
+  private boolean previewing = false;
+  private Camera camera;
+  private int cameraId=-1;
+  private Uri imageFile;
+  
+  
   // Variables behind properties
   private int paintColor;
   private final Paint paint;
   private int backgroundColor;
   private String backgroundImagePath = "";
   private int textAlignment;
-
+  private boolean cameraFeed = false;
+  private boolean cameraUseFront = false;
+  
   // Default values
   private static final int MIN_WIDTH_HEIGHT = 1;
   private static final float DEFAULT_LINE_WIDTH = 2;
@@ -325,7 +351,7 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
    * Panel for drawing and manipulating sprites.
    *
    */
-  private final class CanvasView extends View {
+  private final class CanvasView extends SurfaceView implements Callback{
     // Variables to implement View
     private android.graphics.Canvas canvas;
     private Bitmap bitmap;  // Bitmap backing Canvas
@@ -652,16 +678,72 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
         return Component.COLOR_NONE;
       }
     }
-  }
 
+	@Override
+	public void surfaceCreated(SurfaceHolder holder) {
+		// TODO Auto-generated method stub
+		surfaceCreated=true;
+		Log.d("AI2","SurfaceCreated");
+	}
+
+	@Override
+	public void surfaceChanged(SurfaceHolder holder, int format, int width,
+			int height) {
+		// TODO Auto-generated method stub
+		Log.d("AI2","SurfaceChanged");
+		resetCameraFeed();
+	}
+
+	@Override
+	public void surfaceDestroyed(SurfaceHolder holder) {
+		// TODO Auto-generated method stub
+		if(previewing)	unsetCameraFeed(true);
+		surfaceCreated=false;
+		Log.d("AI2","SurfaceDestroyed");
+		
+	}
+  }
+  /**
+   * 
+   */
+  PictureCallback jpegCallback = new PictureCallback() {
+
+	@Override
+	public void onPictureTaken(byte[] data, Camera camera) {
+		// TODO Auto-generated method stub
+		FileOutputStream outputStream = null;
+		try {
+			outputStream = new FileOutputStream(imageFile.getPath());
+			outputStream.write(data);
+			outputStream.close();
+			CameraAfterPicture(imageFile.toString());
+		} catch (IOException e) {
+			e.printStackTrace();
+		} finally {
+			
+		}
+	}
+	  
+  };
+  
   public Canvas(ComponentContainer container) {
     super(container);
     context = container.$context();
 
     // Create view and add it to its designated container.
     view = new CanvasView(context);
+    // To know when the SurfaceView is ready for Camera Feed
+    view.getHolder().addCallback(view);
+    // This method is deprecated for API 11 and above, it is ignored and set automatically
+    view.getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+    Log.d("AI2", "Canvas Component Constructed");
     container.$add(this);
-
+    $form().registerForOnPause(this);
+    $form().registerForOnResume(this);
+    $form().registerForOnStop(this);
+    $form().registerForOnDestroy(this);
+    
+    
     paint = new Paint();
 
     // Set default properties.
@@ -826,7 +908,221 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
       }
     }
   }
-
+  //Canvas Camera
+  
+  /**
+   * Updates the Canvas according to the cameraFeed property.
+   * Open or Release Camera and Set or Unset Preview
+   * @return true if cameraFeed is on
+   */
+  protected boolean resetCameraFeed(){
+	  Log.d("AI2", "resetCameraFeed");
+	  if(cameraFeed){
+		  setCameraFeed();
+	  }
+	  else {
+		  unsetCameraFeed(true);
+	  }
+	  return cameraFeed;
+  }
+  
+  /**
+   * 
+   * @return true if Camera Feed is set successfully
+   */
+  protected boolean setCameraFeed(){
+	  Log.d("AI2", "setCameraFeed");
+	  if(!surfaceCreated){
+		  return false;
+	  }
+	  if(camera==null || cameraId == -1){
+		  openCamera();
+	  }
+	  if(camera==null){
+		  //there is no Camera on the device or some error happened 
+		  return false; 
+	  }
+	  //Set the parameters to select the best supported preview size. Unsupported preview sizes can cause a crash
+	  setCameraParameters();
+	  //Hardware sensor weirdness, not sure if this is a universal fix. at least Google recommends this approach
+	  // This fix is only applicable to API > 8 , for older versions  there are only hardware specific fixes (maybe?)
+	  setCameraDisplayOrientation();
+	  
+	  //start Preview
+	  try {
+		  SurfaceHolder sH = view.getHolder();
+		  camera.setPreviewDisplay(sH);
+		  camera.startPreview();
+		  previewing=true;
+	  }
+	  catch (IOException e){
+		  Log.d("AI2","Error in setPreviewDisplay " + e.getMessage()); //temporary debug
+		  //form . dispatchErrorOccurredEvent ? 
+		  unsetCameraFeed(true);
+		  return previewing;
+	  }
+	  
+	  return previewing;
+	  
+  }
+  
+  protected boolean setCameraParameters(){
+	  if(camera == null)	return false;
+	  Camera.Parameters params = camera.getParameters();
+	  Camera.Size supSize = getBestPreviewSize(Width(), Height(), params);
+	  Log.d("AI2", "supportedSize = " + supSize.width +"x"+supSize.height);
+	  params.setPreviewSize(supSize.width, supSize.height);
+	  camera.setParameters(params);
+	  return true;
+  }
+  
+  protected Camera.Size getBestPreviewSize(int width, int height, Camera.Parameters params){
+	  Camera.Size result = null;
+	  Camera.Size smallest = null;
+	  for(Camera.Size size : params.getSupportedPreviewSizes()){
+	    Log.d("AI2", "SupportedPreview Size ="+size.width+"x"+size.height);
+      int newArea =  size.width*size.height;
+      smallest = smallest == null ? size : smallest;
+      if(newArea < smallest.width * smallest.height) smallest = size;
+      if(size.width<=width && size.height<=height){
+        if(result == null){
+          result = size;
+        }
+        else {
+          if(newArea > result.width*result.height){
+            result = size;
+          }
+        }
+      }
+	  }
+	  return result != null ? result : smallest;
+  }
+  
+  protected boolean setCameraDisplayOrientation(){
+    if(camera == null)  return false;
+    int camId = Math.max(cameraId, 0);
+    if(SdkLevel.getLevel()>=SdkLevel.LEVEL_FROYO){
+      if(SdkLevel.getLevel()>=SdkLevel.LEVEL_GINGERBREAD){
+       CameraInfo camInfo = GingerbreadUtil.newCameraInfo();
+       GingerbreadUtil.getCameraInfo(camId, camInfo);
+       int rotation = FroyoUtil.getRotation($form().getWindowManager().getDefaultDisplay());
+       int degrees = 0;
+       switch(rotation){
+         case Surface.ROTATION_0 : degrees = 0; break;
+         case Surface.ROTATION_90 : degrees = 90; break;
+         case Surface.ROTATION_180 : degrees = 190; break;
+         case Surface.ROTATION_270 : degrees = 270; break;
+       }
+       int result;
+       if(camInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT){
+         result = ( camInfo.orientation + degrees )  % 360;
+         result = ( 360 - result ) % 360;
+       }
+       else {
+         result = ( camInfo.orientation - degrees + 360 )  % 360;
+       }
+       camera.setDisplayOrientation(result);
+       return true;
+      }
+      else{
+        // Workaround for API == 8 Anyone ?
+        
+        return false;
+      }
+    }
+    else {
+      // Workaround for APIs < 8 Anyone?
+      
+      return false;
+    }
+  }
+  
+  /**
+   * 
+   * @param releaseCamera
+   */
+  protected boolean unsetCameraFeed(boolean releaseCamera){
+	  if(camera == null)	return true;
+	  camera.stopPreview();
+	  previewing=false;
+	  if(releaseCamera)	releaseCamera();
+	  return !previewing;
+  }
+  
+  /**
+   * 
+   */
+  protected void openCamera(){
+	 if(camera!=null){
+		 releaseCamera(); // release the current camera
+	 }
+	 cameraId = getCameraId();
+	 try{
+		 if(SdkLevel.getLevel()>=SdkLevel.LEVEL_GINGERBREAD && cameraId > 0){
+			 camera = GingerbreadUtil.cameraOpen(cameraId);
+		 }
+		 else {
+			 camera = Camera.open();
+		 }
+	 } catch (RuntimeException e){
+		 Log.d("AI2","Error in Opening Camera " + e.getMessage()); //temporary debug
+		 camera = null;
+	 }
+	 if(camera == null){
+		 releaseCamera();
+	 }
+	  
+  }
+  
+  /**
+   * 
+   */
+  protected void releaseCamera(){
+	  if(camera==null)	{
+		  cameraId=-1;
+		  previewing=false;
+		  return;
+	  }
+	  if(previewing)	unsetCameraFeed(false);
+	  camera.release();
+	  camera=null;
+	  cameraId=-1;
+  }
+  
+  /**
+   * 
+   * 
+   */
+  protected int getCameraId(){
+	  int camId=-1;
+	  int camCount=getNumberOfCameras();
+	  if(camCount>0)	camId=0;
+	  if(SdkLevel.getLevel()>=SdkLevel.LEVEL_GINGERBREAD){
+		  CameraInfo camInfo = GingerbreadUtil.newCameraInfo();
+		  for(int cId = 0; cId < camCount; cId++ ){
+			  GingerbreadUtil.getCameraInfo(cId, camInfo);
+			  if(cameraUseFront && camInfo.facing == CameraInfo.CAMERA_FACING_FRONT){ // should public static constants also be wrapped in GingerbreadUtil ???
+		        camId=cId;
+		      }
+		      if(!cameraUseFront && camInfo.facing == CameraInfo.CAMERA_FACING_BACK){
+		        camId=cId;
+		      }
+		  }
+	  }
+	  return camId;
+  }
+  
+  protected int getNumberOfCameras(){
+	  //No definite way for checking camera feature for devices with API less than 5 (ECLAIR)
+	  int camNum=1; //Assume 1 Camera Exists
+	  if(SdkLevel.getLevel()>=SdkLevel.LEVEL_ECLAIR){
+		  camNum = EclairUtil.hasSystemFeature(PackageManager.FEATURE_CAMERA, container.$form()) ? 1 : 0;
+	  }
+	  if(SdkLevel.getLevel()>=SdkLevel.LEVEL_GINGERBREAD){
+		  camNum=GingerbreadUtil.getNumberOfCameras();
+	  }
+	  return camNum;
+  }
 
   // Properties
 
@@ -867,8 +1163,51 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
             ErrorMessages.ERROR_CANVAS_HEIGHT_ERROR);
     }
    }
-
-
+/**
+ * 
+ * @return true if Camera Live Feed is Enabled
+ */
+  @SimpleProperty(
+		  description = "Specifies whether to use the Canvas for Camera Preview"
+		  )
+  public boolean CameraFeed() {
+	  return cameraFeed;
+  }
+  /**
+   * Specify whether to enable or disable Live Feed from Camera
+   * @param camFeed true to enable
+   */
+  @DesignerProperty(editorType = PropertyTypeConstants.PROPERTY_TYPE_BOOLEAN,
+		  defaultValue = "False")
+  @SimpleProperty()
+  public void CameraFeed(boolean camFeed){
+	  cameraFeed = camFeed;
+  }
+  
+  /**
+   * Returns true if the front-facing camera is to be used (when available)
+   *
+   * @return {@code true} indicates front-facing is to be used, {@code false} will open default
+   */
+  @SimpleProperty(description = "Specifies whether the front-facing camera should be used (when available). "
+    + "If the device does not have a front-facing camera, this option will be ignored "
+    + "and the camera will open normally.")
+  public boolean CameraUseFront(){
+	  return cameraUseFront;
+  }
+  
+  /**
+   * Specifies whether the front-facing camera should be used (when available)
+   *
+   * @param front
+   *          {@code true} for front-facing camera, {@code false} for default
+   */
+  @DesignerProperty(editorType = PropertyTypeConstants.PROPERTY_TYPE_BOOLEAN, defaultValue = "False")
+  @SimpleProperty()
+  public void CameraUseFront(boolean useFront){
+	  cameraUseFront = useFront;
+  }
+  
   /**
    * Returns the button's background color as an alpha-red-green-blue
    * integer, i.e., {@code 0xAARRGGBB}.  An alpha of {@code 00}
@@ -1054,6 +1393,11 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
 
 
   // Methods supporting event handling
+  
+  @SimpleEvent
+  public void CameraAfterPicture(String imagePath){
+	  EventDispatcher.dispatchEvent(this, "CameraAfterPicture", imagePath);
+  }
 
   /**
    * When the user touches the canvas and then immediately lifts finger: provides
@@ -1146,6 +1490,29 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
 
   // Functions
 
+  @SimpleFunction( description = "Takes a picture from Camera. Call CameraAfterPicture to retrieve the taken Picture")
+  public void CameraTakePicture(){
+	  if(!previewing){
+		  //Dispatch Error
+		  return;
+	  }
+	  Date date = new Date();
+	  String state = Environment.getExternalStorageState();
+	  if(Environment.MEDIA_MOUNTED.equals(state)){
+		  Log.i("CameraComponent", "External storage is available and writable");
+		  imageFile = Uri.fromFile(new File(Environment.getExternalStorageDirectory(), "/Pictures/app_inventor_" + date.getTime()
+				  + ".jpg"));
+		  camera.takePicture(null, null, jpegCallback);
+		  
+	  }
+	  else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)){
+		  $form().dispatchErrorOccurredEvent(this, "TakePicture", ErrorMessages.ERROR_MEDIA_EXTERNAL_STORAGE_READONLY);
+	  }
+	  else {
+		  $form().dispatchErrorOccurredEvent(this, "TakePicture", ErrorMessages.ERROR_MEDIA_EXTERNAL_STORAGE_NOT_AVAILABLE);
+	  }
+  }
+  
   /**
    * Clears the canvas, without removing the background image, if one
    * was provided.
@@ -1410,5 +1777,43 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
       return true;
     }
   }
+
+@Override
+public void onResume() {
+	// TODO Auto-generated method stub
+	Log.d("AI2", "Canvas on Resume");
+	
+}
+
+@Override
+public void onStop() {
+	// TODO Auto-generated method stub
+	Log.d("AI2", "Canvas on Stop");
+	if(previewing){
+		unsetCameraFeed(true);
+		previewing=false;
+	}
+}
+
+@Override
+public void onDestroy() {
+	// TODO Auto-generated method stub
+	Log.d("AI2", "Canvas on Destroy");
+}
+
+@Override
+public void onPause() {
+	// TODO Auto-generated method stub
+	Log.d("AI2", "Canvas on Pause");
+	
+}
+
+@Override
+public void onDelete() {
+	// TODO Auto-generated method stub
+	Log.d("AI2", "Canvas on Delete");
+	
+	//anyone know when and how this will be called ?
+}
 }
 

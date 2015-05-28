@@ -9,6 +9,8 @@ package com.google.appinventor.components.runtime.util;
 import android.app.Activity;
 import android.content.Intent;
 import android.content.Context;
+import android.hardware.Camera;
+import android.hardware.Camera.CameraInfo;
 import android.nfc.NdefMessage;
 import android.nfc.NdefRecord;
 import android.nfc.NfcAdapter;
@@ -23,7 +25,6 @@ import com.google.appinventor.components.runtime.NearField;
 import java.net.CookieHandler;
 import java.net.CookieManager;
 import java.net.CookieStore;
-
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.util.Locale;
@@ -178,5 +179,38 @@ public class GingerbreadUtil {
     } catch (Exception e) {
         return false;
     }
+  }
+  
+  /**
+   * Returns the number of physical cameras available in the device
+   */
+  public static int getNumberOfCameras(){
+	  return Camera.getNumberOfCameras();
+  }
+  
+  /**
+   *  Returns a new Instance of CameraInfo
+   */
+  public static CameraInfo newCameraInfo(){
+	  return new CameraInfo();
+  }
+
+  /**
+   * Stores all information about the camera with ID cameraId to the Object cameraInfo
+   * 
+   * @param cameraId the camera ID of the camera
+   * @param cameraInfo the data storage Object to store to
+   */
+  public static void getCameraInfo(int cameraId, Camera.CameraInfo cameraInfo){
+	  Camera.getCameraInfo(cameraId, cameraInfo);
+  }
+  
+  /**
+   * Returns Camera Instance connected to the physical camera to open
+   * 
+   * @param cameraId the camera ID of the camera 
+   */
+  public static Camera cameraOpen(int cameraId){
+	  return Camera.open(cameraId);
   }
 }

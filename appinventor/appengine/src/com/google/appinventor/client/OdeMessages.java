@@ -2358,6 +2358,14 @@ public interface OdeMessages extends Messages {
   @Description("")
   String CalibrateStrideLengthProperties();
 
+  @DefaultMessage("CameraFeed")
+  @Description("")
+  String CameraFeedProperties();
+  
+  @DefaultMessage("CameraUseFront")
+  @Description("")
+  String CameraUseFrontProperties();
+  
   @DefaultMessage("CharacterEncoding")
   @Description("")
   String CharacterEncodingProperties();
@@ -3724,6 +3732,10 @@ public interface OdeMessages extends Messages {
   @Description("")
   String AfterActivityEvents();
 
+  @DefaultMessage("CameraAfterPicture")
+  @Description("")
+  String CameraAfterPictureEvents();
+  
   @DefaultMessage("CollidedWith")
   @Description("")
   String CollidedWithEvents();
@@ -4185,6 +4197,10 @@ public interface OdeMessages extends Messages {
   @Description("")
   String TakePictureMethods();
 
+  @DefaultMessage("CameraTakePicture")
+  @Description("")
+  String CameraTakePictureMethods();
+  
   @DefaultMessage("Clear")
   @Description("")
   String ClearMethods();

@@ -104,4 +104,8 @@ public class EclairUtil {
     return form.getPackageManager().getInstallerPackageName(pname);
   }
 
+  public static boolean hasSystemFeature(String fname, Activity form){
+	  return form.getPackageManager().hasSystemFeature(fname);
+  }
+  
 }
