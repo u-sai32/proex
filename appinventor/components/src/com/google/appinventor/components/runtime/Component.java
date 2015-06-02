@@ -49,6 +49,16 @@ public interface Component {
   static final int BUTTON_SHAPE_OVAL = 3;
 
   /*
+   * Camera Orientations. (Canvas)
+   */
+  static final int CAMERA_ORIENTATION_AUTOMATIC = 0;
+  static final int CAMERA_ORIENTATION_TOP = 1;
+  static final int CAMERA_ORIENTATION_RIGHT = 2;
+  static final int CAMERA_ORIENTATION_BOTTOM = 3;
+  static final int CAMERA_ORIENTATION_LEFT = 4;
+  
+  
+  /*
    * Color constants.
    */
   static final int COLOR_NONE = 0x00FFFFFF;

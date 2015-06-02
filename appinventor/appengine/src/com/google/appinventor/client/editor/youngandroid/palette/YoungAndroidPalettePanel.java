@@ -20,6 +20,7 @@ import com.google.appinventor.client.editor.youngandroid.properties.YoungAndroid
 import com.google.appinventor.client.editor.youngandroid.properties.YoungAndroidAssetSelectorPropertyEditor;
 import com.google.appinventor.client.editor.youngandroid.properties.YoungAndroidBooleanPropertyEditor;
 import com.google.appinventor.client.editor.youngandroid.properties.YoungAndroidButtonShapeChoicePropertyEditor;
+import com.google.appinventor.client.editor.youngandroid.properties.YoungAndroidCameraOrientationChoicePropertyEditor;
 import com.google.appinventor.client.editor.youngandroid.properties.YoungAndroidColorChoicePropertyEditor;
 import com.google.appinventor.client.editor.youngandroid.properties.YoungAndroidComponentSelectorPropertyEditor;
 import com.google.appinventor.client.editor.youngandroid.properties.YoungAndroidFontTypefaceChoicePropertyEditor;
@@ -212,6 +213,8 @@ public class YoungAndroidPalettePanel extends Composite implements SimplePalette
       return new YoungAndroidTextReceivingPropertyEditor();
     } else if (editorType.equals(PropertyTypeConstants.PROPERTY_TYPE_ACCELEROMETER_SENSITIVITY)) {
       return new YoungAndroidAccelerometerSensitivityChoicePropertyEditor();
+    } else if(editorType.equals(PropertyTypeConstants.PROPERTY_TYPE_CAMERA_ORIENTATION)) {
+      return new YoungAndroidCameraOrientationChoicePropertyEditor();
     } else {
       return new TextPropertyEditor();
     }

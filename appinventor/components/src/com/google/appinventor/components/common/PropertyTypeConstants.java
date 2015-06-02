@@ -57,6 +57,12 @@ public class PropertyTypeConstants {
   public static final String PROPERTY_TYPE_BUTTON_SHAPE = "button_shape";
 
   /**
+   * Camera Orientations.
+   * @see 
+   * com.google.appinventor.client.editor.youngandroid.properties.YoungAndroidCameraOrientationChoicePropertyEditor
+   */
+  public static final String PROPERTY_TYPE_CAMERA_ORIENTATION = "camera_orientation";
+  /**
    * Any of the colors specified in {@link
    * com.google.appinventor.client.editor.youngandroid.properties.YoungAndroidColorChoicePropertyEditor}.
    */

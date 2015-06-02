@@ -974,7 +974,29 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("oval")
   @Description("Text for button shape choice 'oval'")
   String ovalButtonShape();
-
+  
+  // Used in editor/youngandroid/properties/YoungAndroidCameraOrientationChoicePropertyEditor.java
+  
+  @DefaultMessage("automatic")
+  @Description("Text for camera orientation choice 'automatic'")
+  String automaticCameraOrientation();
+  
+  @DefaultMessage("top")
+  @Description("Text for camera orientation choice 'top'")
+  String topCameraOrientation();
+  
+  @DefaultMessage("right")
+  @Description("Text for camera orientation choice 'right'")
+  String rightCameraOrientation();
+  
+  @DefaultMessage("bottom")
+  @Description("Text for camera orientation choice 'bottom'")
+  String bottomCameraOrientation();
+  
+  @DefaultMessage("left")
+  @Description("Text for camera orientation choice 'left")
+  String leftCameraOrientation();
+  
   // Used in editor/youngandroid/properties/YoungAndroidAssetSelectorPropertyEditor.java
 
   @DefaultMessage("You must select an asset!")
@@ -2365,6 +2387,10 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("CameraUseFront")
   @Description("")
   String CameraUseFrontProperties();
+  
+  @DefaultMessage("CameraOrientation")
+  @Description("")
+  String CameraOrientationProperties();
   
   @DefaultMessage("CharacterEncoding")
   @Description("")

@@ -34,6 +34,7 @@ import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Paint;
+import android.graphics.Point;
 import android.graphics.PorterDuff;
 import android.graphics.Rect;
 import android.graphics.RectF;
@@ -106,7 +107,7 @@ import java.util.List;
 @UsesPermissions(permissionNames = "android.permission.INTERNET," +
 				 "android.permission.CAMERA," +
                  "android.permission.WRITE_EXTERNAL_STORAGE")
-public final class Canvas extends AndroidViewComponent implements ComponentContainer, OnStopListener, OnResumeListener, OnPauseListener,OnDestroyListener, Deleteable {
+public final class Canvas extends AndroidViewComponent implements ComponentContainer, OnStopListener {
   private static final String LOG_TAG = "Canvas";
 
   private final Activity context;
@@ -122,6 +123,7 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
   private Camera camera;
   private int cameraId=-1;
   private Uri imageFile;
+  private int cameraOrientation=0; //0 for automatic, valid values 1(Top), 2(Right), 3(Bottom), 4(Left)
   
   
   // Variables behind properties
@@ -738,10 +740,7 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
     view.getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
     Log.d("AI2", "Canvas Component Constructed");
     container.$add(this);
-    $form().registerForOnPause(this);
-    $form().registerForOnResume(this);
     $form().registerForOnStop(this);
-    $form().registerForOnDestroy(this);
     
     
     paint = new Paint();
@@ -942,16 +941,17 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
 		  //there is no Camera on the device or some error happened 
 		  return false; 
 	  }
+	  if(previewing)  unsetCameraFeed(false);
+	  
 	  //Set the parameters to select the best supported preview size. Unsupported preview sizes can cause a crash
 	  setCameraParameters();
-	  //Hardware sensor weirdness, not sure if this is a universal fix. at least Google recommends this approach
-	  // This fix is only applicable to API > 8 , for older versions  there are only hardware specific fixes (maybe?)
-	  setCameraDisplayOrientation();
+	  int camOrientation = getCameraOrientation(cameraId);
+	  int dispRotation = getDisplayRotation();
+	  int previewOrientation = getPreviewOrientation(cameraId, camOrientation, dispRotation);
+	  setPreviewOrientation(previewOrientation);
 	  
-	  //start Preview
 	  try {
-		  SurfaceHolder sH = view.getHolder();
-		  camera.setPreviewDisplay(sH);
+		  camera.setPreviewDisplay(view.getHolder());
 		  camera.startPreview();
 		  previewing=true;
 	  }
@@ -969,70 +969,207 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
   protected boolean setCameraParameters(){
 	  if(camera == null)	return false;
 	  Camera.Parameters params = camera.getParameters();
-	  Camera.Size supSize = getBestPreviewSize(Width(), Height(), params);
-	  Log.d("AI2", "supportedSize = " + supSize.width +"x"+supSize.height);
-	  params.setPreviewSize(supSize.width, supSize.height);
+	  int camOrientation = getCameraOrientation(cameraId);
+	  int dispRotation = getDisplayRotation();
+	  int imageRotation = getImageRotation(cameraId, camOrientation, dispRotation);
+	  setImageRotation(params, imageRotation);
+	  
+	  if(SdkLevel.getLevel() >= SdkLevel.LEVEL_ECLAIR){
+	    Camera.Size picSize = getBestPictureSize(EclairUtil.getCameraSupportedPictureSizes(params));
+	    double targetAspectRatio = picSize.width / picSize.height ;
+	    Camera.Size preSize = getBestPreviewSize(EclairUtil.getCameraSupportedPreviewSizes(params), targetAspectRatio);
+	    params.setPreviewSize(preSize.width, preSize.height);
+	    params.setPictureSize(picSize.width, picSize.height);
+	  }
+	  
 	  camera.setParameters(params);
 	  return true;
   }
   
-  protected Camera.Size getBestPreviewSize(int width, int height, Camera.Parameters params){
-	  Camera.Size result = null;
-	  Camera.Size smallest = null;
-	  for(Camera.Size size : params.getSupportedPreviewSizes()){
-	    Log.d("AI2", "SupportedPreview Size ="+size.width+"x"+size.height);
-      int newArea =  size.width*size.height;
-      smallest = smallest == null ? size : smallest;
-      if(newArea < smallest.width * smallest.height) smallest = size;
-      if(size.width<=width && size.height<=height){
-        if(result == null){
-          result = size;
-        }
-        else {
-          if(newArea > result.width*result.height){
-            result = size;
-          }
-        }
-      }
-	  }
-	  return result != null ? result : smallest;
-  }
-  
-  protected boolean setCameraDisplayOrientation(){
-    if(camera == null)  return false;
-    int camId = Math.max(cameraId, 0);
-    if(SdkLevel.getLevel()>=SdkLevel.LEVEL_FROYO){
-      if(SdkLevel.getLevel()>=SdkLevel.LEVEL_GINGERBREAD){
-       CameraInfo camInfo = GingerbreadUtil.newCameraInfo();
-       GingerbreadUtil.getCameraInfo(camId, camInfo);
-       int rotation = FroyoUtil.getRotation($form().getWindowManager().getDefaultDisplay());
-       int degrees = 0;
-       switch(rotation){
-         case Surface.ROTATION_0 : degrees = 0; break;
-         case Surface.ROTATION_90 : degrees = 90; break;
-         case Surface.ROTATION_180 : degrees = 190; break;
-         case Surface.ROTATION_270 : degrees = 270; break;
-       }
-       int result;
-       if(camInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT){
-         result = ( camInfo.orientation + degrees )  % 360;
-         result = ( 360 - result ) % 360;
-       }
-       else {
-         result = ( camInfo.orientation - degrees + 360 )  % 360;
-       }
-       camera.setDisplayOrientation(result);
-       return true;
-      }
-      else{
-        // Workaround for API == 8 Anyone ?
-        
-        return false;
+  protected Camera.Size getBestPictureSize(List<Camera.Size> sizes){
+    Camera.Size result = null;
+    int area=0;
+    for(Camera.Size size : sizes){
+      Log.d("AI2", "SupportedPicture Size ="+size.width+"x"+size.height);
+      int newArea = size.width * size.height; 
+      if(newArea > area){
+        result = size;
+        area=newArea;
       }
     }
-    else {
-      // Workaround for APIs < 8 Anyone?
+    return result;
+  }
+  
+  protected Camera.Size getBestPreviewSize(List<Camera.Size> sizes, double targetAspectRatio){
+	  if(sizes == null) return null;
+	  final double ASPECT_TOLERANCE = 0.005;
+	  Camera.Size result = null;
+	  double minDiff = Double.MAX_VALUE;
+	  //Camera.Size smallest = null;
+	  //List<Camera.Size> sizes = EclairUtil.getCameraSupportedPreviewSizes(params);
+	  
+	  
+	  for(Camera.Size size : sizes){
+	    Log.d("AI2", "SupportedPreview Size ="+size.width+"x"+size.height);
+	    double ratio = (double) size.width/size.height;
+      if(Math.abs(ratio - targetAspectRatio) > ASPECT_TOLERANCE)  continue;
+      if(Math.abs(size.height - Height()) < minDiff) {
+        result = size;
+        minDiff = Math.abs(size.height - Height());
+      }
+    }
+	  if(result == null){
+	    Log.d("AI2", "No preview size with target aspect ratio");
+	    minDiff = Double.MAX_VALUE;
+	    for(Camera.Size size : sizes){
+	      if(Math.abs(size.height - Height()) < minDiff) {
+	        result = size;
+	        minDiff = Math.abs(size.height - Height());
+	      }
+	    }
+	  }
+	  return result;
+  }
+  
+  protected Camera.Size getMaxPreviewSize(int width, int height, Camera.Parameters params){
+    Camera.Size result = null;
+    Camera.Size smallest = null;
+    final double ASPECT_TOLERANCE = 0.001;
+    double aspectRatio = width/height;
+    double minDiff = Double.MAX_VALUE;
+    for(Camera.Size size : params.getSupportedPreviewSizes()){
+      Log.d("AI2", "SupportedPreview Size ="+size.width+"x"+size.height);
+      double ratio = (double) size.width/size.height;
+      if(Math.abs(ratio - aspectRatio) > ASPECT_TOLERANCE)  continue;
+      if(Math.abs(size.height - height) < minDiff) {
+        result = size;
+        minDiff = Math.abs(size.height - aspectRatio);
+      }
       
+    }
+    return result != null ? result : smallest;
+  }
+  
+  protected int getCameraOrientation(int camId){
+    int orientation = 0;
+    switch(cameraOrientation){
+      case 0: // Automatic Orientation
+        if(SdkLevel.getLevel()>=SdkLevel.LEVEL_GINGERBREAD){
+          CameraInfo camInfo = GingerbreadUtil.newCameraInfo();
+          GingerbreadUtil.getCameraInfo(cameraId, camInfo);
+          orientation = camInfo.orientation;
+        }
+        else {
+          // There is no proper way to get the camera Orientation in devices (API < 9) 
+          // The orientation is very hardware specific. 
+          orientation = 90; // This is bad assumption, but most Manufacturers seem to mount camera in 90. 
+        }
+        break;
+      case 1: // Top
+        orientation = 0; break;
+      case 2: // Right
+        orientation = 90; break;
+      case 3: // Bottom
+        orientation = 180; break;
+      case 4: // Left
+        orientation = 270; break;
+    }
+    Log.d("AI2", "camera Orientation = " + orientation);
+    return orientation;
+  }
+  
+  /**
+   * 
+   * @return displayRotation in degrees relative to the natural orientation
+   */
+  protected int getDisplayRotation(){
+    int rotation = 0;
+    int degrees = 0;
+    if(SdkLevel.getLevel()>=SdkLevel.LEVEL_FROYO){
+      rotation = FroyoUtil.getRotation($form().getWindowManager().getDefaultDisplay()); // display rotation
+    }
+    else {
+      rotation = $form().getWindowManager().getDefaultDisplay().getOrientation();
+    }
+    switch(rotation){
+      case Surface.ROTATION_0 : degrees = 0; break;
+      case Surface.ROTATION_90 : degrees = 90; break;
+      case Surface.ROTATION_180 : degrees = 190; break;
+      case Surface.ROTATION_270 : degrees = 270; break;
+    }
+    Log.d("AI2", "display Rotation = " + degrees);
+    return degrees;
+   }
+  
+  /**
+   * 
+   * @param camId
+   * @param camOrientation
+   * @param dispRotation
+   * @return
+   */
+  protected int getPreviewOrientation(int camId, int camOrientation, int dispRotation){
+    int result = 0;
+    Log.d("AI2","CamOrientation=" + camOrientation + " rotation=" + dispRotation);
+    if(SdkLevel.getLevel()>=SdkLevel.LEVEL_GINGERBREAD){
+      CameraInfo camInfo = GingerbreadUtil.newCameraInfo();
+      GingerbreadUtil.getCameraInfo(camId, camInfo);
+      if(camInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT){
+        result = ( camOrientation + dispRotation )  % 360;
+        result = ( 360 - result ) % 360;
+      }
+      else {
+        result = ( camOrientation - dispRotation + 360 )  % 360;
+      }
+    }
+    else { 
+      result = ( camOrientation - dispRotation + 360 )  % 360;
+    }
+    Log.d("AI2", "Preview Orientation= " + result);
+    return result;
+  }
+  
+  protected int getImageRotation(int camId, int camOrientation, int dispRotation){
+    int result = 0;
+    if(SdkLevel.getLevel()>=SdkLevel.LEVEL_GINGERBREAD){
+      CameraInfo camInfo = GingerbreadUtil.newCameraInfo();
+      GingerbreadUtil.getCameraInfo(camId, camInfo);
+      Log.d("AI2","CamInfo.orientation="+camInfo.orientation+" rotation="+dispRotation);
+      if(camInfo.facing == Camera.CameraInfo.CAMERA_FACING_FRONT){
+        result = ( camOrientation - dispRotation + 360 )  % 360;
+      }
+     else {
+       result = ( camOrientation + dispRotation )  % 360;
+     }    
+    }
+    else {
+      // Assume camera is rear. 
+      result = ( camOrientation + dispRotation )  % 360;
+    }
+   return result;
+  }
+  
+  protected boolean setPreviewOrientation(int previewOrientation){
+    if(camera == null)  return false;
+    if(SdkLevel.getLevel()>=SdkLevel.LEVEL_FROYO){
+      camera.setDisplayOrientation(previewOrientation);
+      return true;
+    }
+    else {
+      // Workaround for APIs < 8 ?
+      // how do we rotate Preview ?
+      return false;
+    }
+  }
+  
+  protected boolean setImageRotation(Camera.Parameters params, int imageRotation){
+    if(SdkLevel.getLevel()>=SdkLevel.LEVEL_ECLAIR){
+      EclairUtil.setCameraParameterRotation(params, imageRotation);
+      return true;
+    }
+    else {
+      // Workaround for APIs < 5 ?
+      // how do we rotate Image ?
       return false;
     }
   }
@@ -1179,7 +1316,7 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
    */
   @DesignerProperty(editorType = PropertyTypeConstants.PROPERTY_TYPE_BOOLEAN,
 		  defaultValue = "False")
-  @SimpleProperty()
+  @SimpleProperty
   public void CameraFeed(boolean camFeed){
 	  cameraFeed = camFeed;
   }
@@ -1203,9 +1340,30 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
    *          {@code true} for front-facing camera, {@code false} for default
    */
   @DesignerProperty(editorType = PropertyTypeConstants.PROPERTY_TYPE_BOOLEAN, defaultValue = "False")
-  @SimpleProperty()
+  @SimpleProperty
   public void CameraUseFront(boolean useFront){
 	  cameraUseFront = useFront;
+  }
+  
+  @SimpleProperty(description = "This represents the angle the camera image needs to be rotated clockwise "
+      + "to show correctly on the display in its natural orientation. This should be almost always Automatic. "
+      + "This property is device specific. This should only be used to correct wrong orientation in older devices."
+      + "The valid values should be 0 = Automatic,  1 = Top (0), 2 = Right(90), 3 = Bottom(180), 4 = Left(270)")
+  public int CameraOrientation(){
+    return cameraOrientation;
+  }
+  
+  @DesignerProperty(editorType = PropertyTypeConstants.PROPERTY_TYPE_CAMERA_ORIENTATION,
+      defaultValue = Component.CAMERA_ORIENTATION_AUTOMATIC + "")
+  @SimpleProperty
+  public void CameraOrientation(int orientation){
+    if(orientation >= 0 && orientation < 5  ){
+      cameraOrientation = orientation;
+    }
+    else {
+      $form().dispatchErrorOccurredEvent(this, "Camera Orientation",
+          ErrorMessages.ERROR_CANVAS_CAMERA_ORIENTATION_ERROR, cameraOrientation);
+    }
   }
   
   /**
@@ -1503,6 +1661,7 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
 		  imageFile = Uri.fromFile(new File(Environment.getExternalStorageDirectory(), "/Pictures/app_inventor_" + date.getTime()
 				  + ".jpg"));
 		  camera.takePicture(null, null, jpegCallback);
+		  previewing = false;
 		  
 	  }
 	  else if (Environment.MEDIA_MOUNTED_READ_ONLY.equals(state)){
@@ -1778,42 +1937,17 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
     }
   }
 
-@Override
-public void onResume() {
-	// TODO Auto-generated method stub
-	Log.d("AI2", "Canvas on Resume");
-	
-}
 
-@Override
-public void onStop() {
-	// TODO Auto-generated method stub
-	Log.d("AI2", "Canvas on Stop");
-	if(previewing){
-		unsetCameraFeed(true);
-		previewing=false;
-	}
-}
+  @Override
+  public void onStop() {
+    // TODO Auto-generated method stub
+    Log.d("AI2", "Canvas on Stop");
+    if(previewing){
+      unsetCameraFeed(true);
+      previewing=false;
+    }
+  }
 
-@Override
-public void onDestroy() {
-	// TODO Auto-generated method stub
-	Log.d("AI2", "Canvas on Destroy");
-}
 
-@Override
-public void onPause() {
-	// TODO Auto-generated method stub
-	Log.d("AI2", "Canvas on Pause");
-	
-}
-
-@Override
-public void onDelete() {
-	// TODO Auto-generated method stub
-	Log.d("AI2", "Canvas on Delete");
-	
-	//anyone know when and how this will be called ?
-}
 }
 

@@ -5,13 +5,15 @@
 // http://www.apache.org/licenses/LICENSE-2.0
 package com.google.appinventor.components.runtime.util;
 
+import java.util.List;
+
 import com.google.appinventor.components.runtime.WebViewer;
 
 import android.app.Activity;
 import android.app.AlertDialog;
 import android.content.Context;
 import android.content.DialogInterface;
-
+import android.hardware.Camera;
 import android.view.MotionEvent;
 import android.view.View;
 import android.webkit.GeolocationPermissions;
@@ -41,6 +43,10 @@ public class EclairUtil {
    */
   public static void overridePendingTransitions(Activity activity, int enterAnim, int exitAnim) {
     activity.overridePendingTransition(enterAnim, exitAnim);
+  }
+  
+  public static void setCameraParameterRotation(Camera.Parameters params, int rotation){
+    params.setRotation(rotation);
   }
 
   /**
@@ -106,6 +112,14 @@ public class EclairUtil {
 
   public static boolean hasSystemFeature(String fname, Activity form){
 	  return form.getPackageManager().hasSystemFeature(fname);
+  }
+  
+  public static List<Camera.Size> getCameraSupportedPreviewSizes(Camera.Parameters params){
+    return params.getSupportedPreviewSizes();
+  }
+  
+  public static List<Camera.Size> getCameraSupportedPictureSizes(Camera.Parameters params){
+    return params.getSupportedPictureSizes();
   }
   
 }

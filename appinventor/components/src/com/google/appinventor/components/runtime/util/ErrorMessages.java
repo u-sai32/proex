@@ -108,6 +108,7 @@ public final class ErrorMessages {
   public static final int ERROR_CANVAS_BITMAP_ERROR = 1001;
   public static final int ERROR_CANVAS_WIDTH_ERROR = 1002;
   public static final int ERROR_CANVAS_HEIGHT_ERROR = 1003;
+  public static final int ERROR_CANVAS_CAMERA_ORIENTATION_ERROR = 1004;
   // Web errors
   public static final int ERROR_WEB_UNABLE_TO_GET = 1101;
   public static final int ERROR_WEB_UNSUPPORTED_ENCODING = 1102;
@@ -359,6 +360,9 @@ public final class ErrorMessages {
     errorMessages.put(ERROR_CANVAS_BITMAP_ERROR, "Error getting Canvas contents to save");
     errorMessages.put(ERROR_CANVAS_WIDTH_ERROR, "Canvas width cannot be set to non-positive number");
     errorMessages.put(ERROR_CANVAS_HEIGHT_ERROR, "Canvas height cannot be set to non-positive number");
+    errorMessages.put(ERROR_CANVAS_CAMERA_ORIENTATION_ERROR,
+        "The value -- %s -- provided for Canvas Camera Orientation was bad. " +
+        "The only legal values are 0, 1, 2, 3, or 4.");
     // Web errors
     errorMessages.put(ERROR_WEB_UNABLE_TO_GET,
         "Unable to get a response with the specified URL: %s");
