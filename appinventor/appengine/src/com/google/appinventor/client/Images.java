@@ -121,6 +121,12 @@ public interface Images extends Resources {
    */
   @Source("com/google/appinventor/images/checkbox.png")
   ImageResource checkbox();
+  
+  /**
+   * Designer palette item: external component
+   */
+  @Source("com/google/appinventor/images/externalComponent.png")
+  ImageResource externalComponent();
 
   /**
    * Designer palette item: TimePicker Component

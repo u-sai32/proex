@@ -545,7 +545,9 @@ public class YaVersion {
   // For EMAILPICKER_COMPONENT_VERSION 3:
   // - RequestFocus function was added (via TextBoxBase)
   public static final int EMAILPICKER_COMPONENT_VERSION = 3;
-
+  
+  public static final int EXTRA_COMPONENT_VERSION = 1;
+  
   // For FILE_COMPONENT_VERSION 1:
   public static final int FILE_COMPONENT_VERSION = 1;
 

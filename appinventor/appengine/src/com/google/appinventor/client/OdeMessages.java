@@ -2024,6 +2024,10 @@ public interface OdeMessages extends Messages {
   @Description("")
   String legoComponentPallette();
 
+  @DefaultMessage("External Components")
+  @Description("")
+  String externalComponentPallette();
+  
   @DefaultMessage("Experimental")
   @Description("")
   String experimentalComponentPallette();
@@ -2365,6 +2369,10 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("Checked")
   @Description("")
   String CheckedProperties();
+  
+  @DefaultMessage("Class")
+  @Description("")
+  String ClassProperties();
 
   @DefaultMessage("CloseScreenAnimation")
   @Description("")
@@ -2517,6 +2525,10 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("Message")
   @Description("")
   String MessageProperties();
+  
+  @DefaultMessage("Method")
+  @Description("")
+  String MethodProperties();
 
   @DefaultMessage("MinimumInterval")
   @Description("")
@@ -4081,6 +4093,15 @@ public interface OdeMessages extends Messages {
   String ShakingEvents();
 
   //Methods
+  
+  @DefaultMessage("Extra")
+  @Description("")
+  String ExtraMethods();
+  
+  @DefaultMessage("LoadDynamic")
+  @Description("")
+  String LoadDynamicMethods();
+  
   @DefaultMessage("ResolveActivity")
   @Description("")
   String ResolveActivityMethods();
