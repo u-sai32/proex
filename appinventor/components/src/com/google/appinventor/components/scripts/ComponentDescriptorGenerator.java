@@ -73,7 +73,8 @@ public final class ComponentDescriptorGenerator extends ComponentProcessor {
     sb.append("\",\n  \"version\": \"");
     sb.append(component.getVersion());
     sb.append("\",\n  \"categoryString\": \"");
-    sb.append(component.getCategoryString());
+    if(component.getExternal()) sb.append("EXTERNAL");
+    else  sb.append(component.getCategoryString());
     sb.append("\",\n  \"helpString\": ");
     sb.append(formatDescription(component.getHelpDescription()));
     sb.append(",\n  \"showOnPalette\": \"");
@@ -195,13 +196,25 @@ public final class ComponentDescriptorGenerator extends ComponentProcessor {
   @Override
   protected void outputResults() throws IOException {
     StringBuilder sb = new StringBuilder();
-
+    StringBuilder sbExt = new StringBuilder();
     sb.append('[');
     String separator = "";
 
     // Components are already sorted.
     for (Map.Entry<String, ComponentInfo> entry : components.entrySet()) {
       ComponentInfo component = entry.getValue();
+      if(component.getExternal()){
+        sbExt.append('[');
+        outputComponent(component, sbExt);
+        sbExt.append(']');
+        FileObject srcExt = createOutputFileObject(component.name + ".json");
+        Writer writerExt = srcExt.openWriter();
+        writerExt.write(sbExt.toString());
+        writerExt.flush();
+        writerExt.close();
+        sbExt.setLength(0);
+        messager.printMessage(Diagnostic.Kind.NOTE, "Wrote file " + srcExt.toUri());
+      }
       sb.append(separator);
       outputComponent(component, sb);
       separator = ",\n";

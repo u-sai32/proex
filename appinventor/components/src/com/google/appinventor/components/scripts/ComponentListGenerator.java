@@ -35,6 +35,7 @@ public final class ComponentListGenerator extends ComponentProcessor {
     // Build the component list and build info simultaneously.
     StringBuilder componentList = new StringBuilder();
     StringBuilder componentBuildInfo = new StringBuilder();
+    StringBuilder extComponentBuildInfo = new StringBuilder();
     componentBuildInfo.append("[\n");
 
     // Components are already sorted.
@@ -42,7 +43,18 @@ public final class ComponentListGenerator extends ComponentProcessor {
     String jsonSeparator = "";
     for (Map.Entry<String, ComponentInfo> entry : components.entrySet()) {
       ComponentInfo component = entry.getValue();
-
+      if(component.getExternal()){
+        extComponentBuildInfo.append("[\n");
+        outputComponentBuildInfo(component, extComponentBuildInfo);
+        extComponentBuildInfo.append("\n]");
+        FileObject src = createOutputFileObject(component.name + "_build_info.json");
+        Writer writer = src.openWriter();
+        writer.write(extComponentBuildInfo.toString());
+        writer.flush();
+        writer.close();
+        extComponentBuildInfo.setLength(0);
+        continue;
+      }
       componentList.append(listSeparator).append(component.name);
       listSeparator = "\n";
 

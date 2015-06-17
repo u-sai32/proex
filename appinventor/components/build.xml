@@ -213,6 +213,7 @@
              srcdir="${src.dir}"
              includeantruntime="false">
         <include name="${components.pkg}/runtime/*.java" />
+        <include name="${components.pkg}/external/*.java" />
         <classpath>
           <pathelement location="${public.build.dir}/AndroidRuntime.jar" />
           <pathelement location="${local.build.dir}/HtmlEntities.jar" />

@@ -8,6 +8,7 @@ package com.google.appinventor.components.scripts;
 
 import com.google.appinventor.components.annotations.DesignerComponent;
 import com.google.appinventor.components.annotations.DesignerProperty;
+import com.google.appinventor.components.annotations.External;
 import com.google.appinventor.components.annotations.PropertyCategory;
 import com.google.appinventor.components.annotations.SimpleEvent;
 import com.google.appinventor.components.annotations.SimpleFunction;
@@ -483,6 +484,7 @@ public abstract class ComponentProcessor extends AbstractProcessor {
     private String category;
     private String categoryString;
     private boolean simpleObject;
+    private boolean externalObject;
     private boolean designerComponent;
     private int version;
     private boolean showOnPalette;
@@ -508,6 +510,9 @@ public abstract class ComponentProcessor extends AbstractProcessor {
         String annotationName = am.getAnnotationType().toString();
         if (annotationName.equals(SimpleObject.class.getName())) {
           simpleObject = true;
+        }
+        if (annotationName.equals(External.class.getName())) {
+          externalObject = true;
         }
         if (annotationName.equals(DesignerComponent.class.getName())) {
           designerComponent = true;
@@ -615,6 +620,14 @@ public abstract class ComponentProcessor extends AbstractProcessor {
       return iconName;
     }
 
+    /**
+     * Returns a boolean value indicating whether the Component is built as an external component.
+     * @return true if the Component is external Component
+     */
+    protected boolean getExternal(){
+      return externalObject;
+    }
+    
     private String getDisplayNameForComponentType(String componentTypeName) {
       // Users don't know what a 'Form' is.  They know it as a 'Screen'.
       return "Form".equals(componentTypeName) ? "Screen" : componentTypeName;

@@ -25,6 +25,10 @@
     <ant inheritAll="false" useNativeBasedir="true" dir="components"/>
     <ant inheritAll="false" useNativeBasedir="true" dir="buildserver" target="installplay"/>
   </target>
+  
+  <target name="extcomps">
+    <ant inheritAll="false" useNativeBasedir="true" dir="components"/>
+  </target>
 
   <target name="noplay">
     <ant inheritAll="false" useNativeBasedir="true" dir="appengine"/>
