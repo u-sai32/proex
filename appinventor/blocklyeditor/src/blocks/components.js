@@ -286,6 +286,7 @@ Blockly.Blocks.component_method = {
 
     this.typeName = xmlElement.getAttribute('component_type');
     this.methodName = xmlElement.getAttribute('method_name');
+    console.log(this.methodName);
     var isGenericString = xmlElement.getAttribute('is_generic');
     this.isGeneric = (isGenericString == "true" ? true : false);
     if(!this.isGeneric) {
@@ -305,6 +306,7 @@ Blockly.Blocks.component_method = {
         .appendField(Blockly.Msg.LANG_COMPONENT_BLOCK_METHOD_TITLE_CALL)
         .appendField(this.componentDropDown, "COMPONENT_SELECTOR")
         .appendField('.' + window.parent.BlocklyPanel_getLocalizedMethodName(this.getMethodTypeObject().name));
+      console.log(this.getMethodTypeObject().name);
       this.componentDropDown.setValue(this.instanceName);
     } else {
       this.appendDummyInput()

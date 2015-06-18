@@ -122,7 +122,7 @@ Blockly.Drawer.showBuiltin = function(drawerName) {
 Blockly.Drawer.showComponent = function(instanceName) {
   if (Blockly.ComponentInstances[instanceName]) {
     Blockly.Drawer.flyout_.hide();
-
+    console.log("showComp = " + instanceName);
     var xmlList = Blockly.Drawer.instanceNameToXMLArray(instanceName);
     Blockly.Drawer.flyout_.show(xmlList);
   } else {
@@ -182,14 +182,18 @@ Blockly.Drawer.instanceNameToXMLArray = function(instanceName) {
   for(var i=0;i<eventObjects.length;i++) {
     if (eventObjects[i].deprecated === "true") continue;
     mutatorAttributes = {component_type: typeName, instance_name: instanceName, event_name : eventObjects[i].name};
+    console.log(mutatorAttributes);
     xmlArray = xmlArray.concat(Blockly.Drawer.blockTypeToXMLArray("component_event",mutatorAttributes));
+    console.log(xmlArray);
   }
   //create non-generic method blocks
   var methodObjects = Blockly.ComponentTypes[typeName].componentInfo.methods;
   for(var i=0;i<methodObjects.length;i++) {
     if (methodObjects[i].deprecated === "true") continue;
     mutatorAttributes = {component_type: typeName, instance_name: instanceName, method_name: methodObjects[i].name, is_generic:"false"};
+    console.log(mutatorAttributes);
     xmlArray = xmlArray.concat(Blockly.Drawer.blockTypeToXMLArray("component_method",mutatorAttributes));
+    console.log(xmlArray);
   }
 
   //for each property
@@ -198,17 +202,20 @@ Blockly.Drawer.instanceNameToXMLArray = function(instanceName) {
     //create non-generic get block
     if(propertyObjects[i].rw == "read-write" || propertyObjects[i].rw == "read-only") {
       mutatorAttributes = {set_or_get:"get", component_type: typeName, instance_name: instanceName, property_name: propertyObjects[i].name, is_generic: "false"};
+      console.log(mutatorAttributes);
       xmlArray = xmlArray.concat(Blockly.Drawer.blockTypeToXMLArray("component_set_get",mutatorAttributes));
     }
     //create non-generic set block
     if(propertyObjects[i].rw == "read-write" || propertyObjects[i].rw == "write-only") {
       mutatorAttributes = {set_or_get:"set", component_type: typeName, instance_name: instanceName, property_name: propertyObjects[i].name, is_generic: "false"};
+      console.log(mutatorAttributes);
       xmlArray = xmlArray.concat(Blockly.Drawer.blockTypeToXMLArray("component_set_get",mutatorAttributes));
     }
   }
 
   //create component literal block
   mutatorAttributes = {component_type: typeName, instance_name: instanceName};
+  console.log(mutatorAttributes);
   xmlArray = xmlArray.concat(Blockly.Drawer.blockTypeToXMLArray("component_component_block",mutatorAttributes));
 
   return xmlArray;
@@ -244,6 +251,7 @@ Blockly.Drawer.componentTypeToXMLArray = function(typeName) {
 
 Blockly.Drawer.blockTypeToXMLArray = function(blockType,mutatorAttributes) {
   var xmlString = Blockly.Drawer.getDefaultXMLString(blockType,mutatorAttributes);
+  console.log(xmlString);
   if(xmlString == null) {
     // [lyn, 10/23/13] Handle procedure calls in drawers specially
     if (blockType == 'procedures_callnoreturn' || blockType == 'procedures_callreturn') {

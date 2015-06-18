@@ -26,6 +26,7 @@ import com.google.appinventor.client.utils.Downloader;
 import com.google.appinventor.client.widgets.DropDownButton;
 import com.google.appinventor.client.widgets.DropDownButton.DropDownItem;
 import com.google.appinventor.client.wizards.DownloadUserSourceWizard;
+import com.google.appinventor.client.wizards.FileUploadWizard;
 import com.google.appinventor.client.wizards.KeystoreUploadWizard;
 import com.google.appinventor.client.wizards.ProjectUploadWizard;
 import com.google.appinventor.client.wizards.TemplateUploadWizard;
@@ -34,6 +35,8 @@ import com.google.appinventor.common.version.AppInventorFeatures;
 import com.google.appinventor.common.version.GitBuildId;
 import com.google.appinventor.components.common.YaVersion;
 import com.google.appinventor.shared.rpc.ServerLayout;
+import com.google.appinventor.shared.rpc.project.FileNode;
+import com.google.appinventor.shared.rpc.project.FolderNode;
 import com.google.appinventor.shared.rpc.project.GallerySettings;
 import com.google.appinventor.shared.rpc.project.ProjectRootNode;
 import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidProjectNode;
@@ -93,6 +96,8 @@ public class TopToolbar extends Composite {
   private static final String WIDGET_NAME_USB_BUTTON = "Usb";
   private static final String WIDGET_NAME_RESET_BUTTON = "Reset";
   private static final String WIDGET_NAME_HARDRESET_BUTTON = "HardReset";
+  private static final String WIDGET_NAME_COMPONENT = "Component";
+  private static final String WIDGET_NAME_INSTALL_COMPONENT_BUTTON = "InstallComponent";
   private static final String WIDGET_NAME_PROJECT = "Project";
   private static final String WIDGET_NAME_HELP = "Help";
   private static final String WIDGET_NAME_ABOUT = "About";
@@ -114,6 +119,7 @@ public class TopToolbar extends Composite {
 
   public DropDownButton fileDropDown;
   public DropDownButton connectDropDown;
+  public DropDownButton componentDropDown;
   public DropDownButton buildDropDown;
   public DropDownButton helpDropDown;
   public DropDownButton adminDropDown;
@@ -130,6 +136,7 @@ public class TopToolbar extends Composite {
 
     List<DropDownItem> fileItems = Lists.newArrayList();
     List<DropDownItem> connectItems = Lists.newArrayList();
+    List<DropDownItem> componentItems = Lists.newArrayList();
     List<DropDownItem> buildItems = Lists.newArrayList();
     List<DropDownItem> helpItems = Lists.newArrayList();
 
@@ -177,7 +184,11 @@ public class TopToolbar extends Composite {
         new ResetAction()));
     connectItems.add(new DropDownItem(WIDGET_NAME_HARDRESET_BUTTON, MESSAGES.hardResetConnectionsMenuItem(),
         new HardResetAction()));
-
+    
+    //Component -> {Install Component}
+    componentItems.add(new DropDownItem(WIDGET_NAME_INSTALL_COMPONENT_BUTTON, MESSAGES.importComponentMenuItem(),
+        new InstallComponentAction()));
+    
     // Build -> {Show Barcode; Download to Computer; Generate YAIL only when logged in as an admin}
     buildItems.add(new DropDownItem(WIDGET_NAME_BUILD_BARCODE, MESSAGES.showBarcodeMenuItem(),
         new BarcodeAction()));
@@ -215,6 +226,8 @@ public class TopToolbar extends Composite {
         fileItems, false);
     connectDropDown = new DropDownButton(WIDGET_NAME_CONNECT_TO, MESSAGES.connectTabName(),
         connectItems, false);
+    componentDropDown = new DropDownButton(WIDGET_NAME_COMPONENT, MESSAGES.componentTabName(),
+        componentItems, false);
     buildDropDown = new DropDownButton(WIDGET_NAME_BUILD, MESSAGES.buildTabName(),
         buildItems, false);
     helpDropDown = new DropDownButton(WIDGET_NAME_HELP, MESSAGES.helpTabName(),
@@ -223,12 +236,14 @@ public class TopToolbar extends Composite {
     // Set the DropDown Styles
     fileDropDown.setStyleName("ode-TopPanelButton");
     connectDropDown.setStyleName("ode-TopPanelButton");
+    componentDropDown.setStyleName("ode-TopPanelButton");
     buildDropDown.setStyleName("ode-TopPanelButton");
     helpDropDown.setStyleName("ode-TopPanelButton");
 
     // Add the Buttons to the Toolbar.
     toolbar.add(fileDropDown);
     toolbar.add(connectDropDown);
+    toolbar.add(componentDropDown);
     toolbar.add(buildDropDown);
 
     // Commented out language switching until we have a clean Chinese translation. (AFM)
@@ -353,7 +368,33 @@ public class TopToolbar extends Composite {
       }
     }
   }
-
+  private class InstallComponentAction implements Command {
+    @Override
+    public void execute() {
+      
+      FolderNode srcFolderNode = (FolderNode) Ode.getInstance().getCurrentYoungAndroidProjectRootNode().findNode("src");
+      FileUploadWizard uploader = new FileUploadWizard(srcFolderNode, new FileUploadWizard.FileUploadedCallback() {
+          @Override
+          public void onFileUploaded(FolderNode folderNode, FileNode fileNode) {
+            long currentProjectId = Ode.getInstance().getCurrentYoungAndroidProjectId();
+            OdeLog.wlog("odeLog :*: FName = " +fileNode.getFullName() + "Name = "+fileNode.getName());
+            Ode.getInstance().getProjectService().load(currentProjectId, "src/extra_component.json", new OdeAsyncCallback<String>() {
+              @Override
+              public void onSuccess(String result) {
+                OdeLog.wlog("odeLog :*: " +result);
+                Ode.getInstance().switchToProjectsView();
+                Ode.getInstance().openYoungAndroidProjectInDesigner(Ode.getInstance().getProjectManager().getProject(Ode.getInstance().getCurrentYoungAndroidProjectId()));
+                //
+                //Ode.getInstance().getTopToolbar().updateFileMenuButtons(0);
+              }
+            });
+          }
+        });
+      uploader.show();
+    }
+    
+    
+  }
   private class BarcodeAction implements Command {
     @Override
     public void execute() {

@@ -223,9 +223,28 @@ Blockly.ComponentTypes.haveType = function(typeName) {
 Blockly.ComponentTypes.populateTypes = function() {
   
   var componentInfoArray = JSON.parse(window.parent.BlocklyPanel_getComponentsJSONString());
+  var externalComponentInfoArray = JSON.parse('[{ "name": "CheckBox", \
+		  "version": "2",\
+		  "categoryString": "USERINTERFACE",\
+		  "helpString": "The Extra component that contains Extra Method and LoadDynamic Method. LoadDynamic which loads a dex file. Extra Method calls the function of the loaded dex file and is available in the Blocks Editor",\
+		  "showOnPalette": "true",\
+		  "nonVisible": "false",\
+		  "iconName": "images/externalComponent.png",\
+		  "properties": [{ "name": "Class", "editorType": "string", "defaultValue": ""},\
+		{ "name": "Method", "editorType": "string", "defaultValue": ""}],\
+		  "blockProperties": [{ "name": "Class", "description": "Full Identifier Name of the Class to Load", "type": "text", "rw": "read-write"},\
+		    { "name": "Method", "description": "Name of the Method to Call", "type": "text", "rw": "read-write"},\
+		  { "name": "TextColors", "description": "", "type": "number", "rw": "read-write"}],\
+		  "events": [{ "name": "Changed", "description": "Default Changed event handler.", "deprecated": "false", "params": []}],\
+		  "methods": [{ "name": "Extra", "description": "Method for Extra", "deprecated": "false", "params": [{ "name": "method", "type": "text"},{ "name": "strinp", "type": "text"}], "returnType": "text"},\
+		  { "name": "AddDays", "description": "An instant in time some days after the argument", "deprecated": "false", "params": [{ "name": "instant", "type": "InstantInTime"},{ "name": "days", "type": "number"}], "returnType": "InstantInTime"},\
+		  { "name": "LoadDynamic", "description": "Method for LoadDynamic", "deprecated": "false", "params": [{ "name": "file", "type": "text"},{ "name": "classtoload", "type": "text"}], "returnType": "list"}]}\
+		]');
+  componentInfoArray = componentInfoArray.concat(externalComponentInfoArray);
   for(var i=0;i<componentInfoArray.length;i++) {
     var componentInfo = componentInfoArray[i];
     var typeName = componentInfo.name;
+    console.log("block_populate : " + i +" = "+ typeName);
     Blockly.ComponentTypes[typeName] = {};
     Blockly.ComponentTypes[typeName].componentInfo = componentInfo;
     Blockly.ComponentTypes[typeName].eventDictionary = {};

@@ -528,7 +528,16 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("Hard Reset")
   @Description("Hard Reset the Emulator.")
   String hardResetConnectionsMenuItem();
-
+  
+  //Component
+  @DefaultMessage("Component")
+  @Description("Label of Component Menu")
+  String componentTabName();
+  
+  @DefaultMessage("Import Component")
+  @Description("Fake.. Just upload the JSON file for now")
+  String importComponentMenuItem();
+  
   //Build
   @DefaultMessage("Build")
   @Description("Label of the button leading to build related cascade items")
@@ -1565,8 +1574,13 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("Import Project...")
   @Description("Caption for project upload wizard.")
   String projectUploadWizardCaption();
-
+  // Used in wizards/ComponentUploadWizard.java
+  
+  @DefaultMessage("Import Component...")
+  @Description("Caption for component upload wizard.")
+  String componentUploadWizardCaption();
   // Used in GalleryToolBar.java
+  
   @DefaultMessage("Search")
   @Description("Text for gallery search button")
   String gallerySearch();
