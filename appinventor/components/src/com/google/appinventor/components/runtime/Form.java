@@ -1614,10 +1614,11 @@ public class Form extends Activity
     Drawable setDraw = backgroundDrawable;
     if (backgroundImagePath != "" && setDraw != null) {
       setDraw = backgroundDrawable.getConstantState().newDrawable();
-      setDraw.setColorFilter(backgroundColor, PorterDuff.Mode.DST_OVER);
-    } else {
+      setDraw.setColorFilter(backgroundColor != Component.COLOR_DEFAULT ? backgroundColor : Component.COLOR_WHITE, 
+          PorterDuff.Mode.DST_OVER);
+    } else { 
       setDraw = new ColorDrawable(
-        (backgroundColor != Component.COLOR_DEFAULT) ? backgroundColor : Component.COLOR_WHITE);
+      backgroundColor != Component.COLOR_DEFAULT ? backgroundColor : Component.COLOR_WHITE);
     }
     ViewUtil.setBackgroundImage(bgview, setDraw);
     bgview.invalidate();
