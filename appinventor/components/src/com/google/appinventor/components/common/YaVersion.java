@@ -521,6 +521,8 @@ public class YaVersion {
 
   public static final int CLOCK_COMPONENT_VERSION = 1;
 
+  public static final int COMPOSITE_ARRANGEMENT_VERSION = 1;
+
   // For CONTACTPICKER_COMPONENT_VERSION 2:
   // - The Alignment property was renamed to TextAlignment.
   // For CONTACTPICKER_COMPONENT_VERSION 3:
