@@ -253,7 +253,7 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
       public void onSelected() {
         // are we showing the blocks editor? if so, toggle the component drawer
         if (Ode.getInstance().getCurrentFileEditor() instanceof YaBlocksEditor) {
-          YaBlocksEditor blocksEditor = 
+          YaBlocksEditor blocksEditor =
               (YaBlocksEditor) Ode.getInstance().getCurrentFileEditor();
           OdeLog.log("Showing item " + getName());
           blocksEditor.showComponentBlocks(getName());
@@ -367,6 +367,15 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
    * caption may want to initialize the caption to match the component's name.
    */
   public void onCreateFromPalette() {
+  }
+
+  /**
+   * Invoked after a component is added to a container
+   *
+   * Some subclasses may wish to override this method so as to do some actions
+   * that can only be done after they are added to a container
+   */
+  public void onAddedToContainer() {
   }
 
   /**
@@ -665,7 +674,7 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
     itemNode.setUserObject(sourceStructureExplorerItem);
     return itemNode;
   }
-  
+
   /**
    * If this component isn't a Form, and this component's type isn't already in typesAndIcons,
    * adds this component's type name as a key to typesAndIcons, mapped to the HTML string used
@@ -698,7 +707,7 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
   protected ProjectNode getAssetNode(String name) {
     Project project = Ode.getInstance().getProjectManager().getProject(editor.getProjectId());
     if (project != null) {
-      HasAssetsFolder<YoungAndroidAssetsFolder> hasAssetsFolder = 
+      HasAssetsFolder<YoungAndroidAssetsFolder> hasAssetsFolder =
           (YoungAndroidProjectNode) project.getRootNode();
       for (ProjectNode asset : hasAssetsFolder.getAssetsFolder().getChildren()) {
         if (asset.getName().equals(name)) {

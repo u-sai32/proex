@@ -109,7 +109,7 @@ public abstract class MockContainer extends MockVisibleComponent implements Drop
     }
   }
 
-  
+
   /**
    * Adds a new component to the end of this container.
    *
@@ -156,6 +156,7 @@ public abstract class MockContainer extends MockVisibleComponent implements Drop
   private void addComponent(MockComponent component, int beforeIndex) {
     // Set the container to be the parent of the component
     component.setContainer(this);
+    component.onAddedToContainer();
 
     // Add the component as a child component of the container
     if (beforeIndex == -1) {
