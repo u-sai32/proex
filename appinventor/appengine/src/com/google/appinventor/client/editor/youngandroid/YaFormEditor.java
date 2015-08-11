@@ -272,7 +272,7 @@ public final class YaFormEditor extends SimpleEditor implements FormChangeListen
   public SimplePalettePanel getComponentPalettePanel() {
     return palettePanel;
   }
-  
+
   @Override
   public SimpleNonVisibleComponentsPanel getNonVisibleComponentsPanel() {
     return nonVisibleComponentsPanel;
@@ -432,7 +432,7 @@ public final class YaFormEditor extends SimpleEditor implements FormChangeListen
    * Parses the JSON properties and creates the component structure. This method is called
    * recursively for nested components. For the initial invocation parent shall be null.
    */
-  private MockComponent createMockComponent(JSONObject propertiesObject, MockContainer parent) {
+  public MockComponent createMockComponent(JSONObject propertiesObject, MockContainer parent) {
     Map<String, JSONValue> properties = propertiesObject.getProperties();
 
     // Component name and type
@@ -486,7 +486,7 @@ public final class YaFormEditor extends SimpleEditor implements FormChangeListen
         createMockComponent(nestedComponent.asObject(), (MockContainer) mockComponent);
       }
     }
-
+    OdeLog.log("the width of " + mockComponent.getName() + " is " + mockComponent.getPropertyValue("Width"));
     return mockComponent;
   }
 
