@@ -19,14 +19,14 @@ import com.google.appinventor.components.common.YaVersion;
  * It is not expected to be used elsewhere
  */
 @DesignerComponent(version = YaVersion.COMPOSITE_ARRANGEMENT_VERSION,
-    category = ComponentCategory.INTERNAL)
+    category = ComponentCategory.LAYOUT)
 @SimpleObject
-public class CompositeArrangement extends VerticalArrangement {
+public class CompositeArrangement extends HVArrangement {
 
   private static final int LENGTH_PREFERRED = -1;
 
   public CompositeArrangement(ComponentContainer container) {
-    super(container);
+    super(container, ComponentConstants.LAYOUT_ORIENTATION_VERTICAL);
 
     Height(LENGTH_PREFERRED);
     Width(LENGTH_PREFERRED);
