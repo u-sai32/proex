@@ -12,15 +12,15 @@ import com.google.appinventor.components.common.ComponentCategory;
 import com.google.appinventor.components.common.ComponentConstants;
 import com.google.appinventor.components.common.YaVersion;
 
-// /**
-//  * A vertical arrangement with special configurations for composite components
-//  * All properties are hidden from users
-//  * Height and width are fixed to automatic
-//  * It is not expected to be used elsewhere
-//  */
-// @DesignerComponent(version = YaVersion.COMPOSITE_ARRANGEMENT_VERSION,
-//     category = ComponentCategory.INTERNAL)
-// @SimpleObject
+/**
+ * A vertical arrangement with special configurations for composite components
+ * All properties are hidden from users
+ * Height and width are fixed to automatic
+ * It is not expected to be used elsewhere
+ */
+@DesignerComponent(version = YaVersion.COMPOSITE_ARRANGEMENT_VERSION,
+    category = ComponentCategory.INTERNAL)
+@SimpleObject
 public class CompositeArrangement extends VerticalArrangement {
 
   private static final int LENGTH_PREFERRED = -1;
