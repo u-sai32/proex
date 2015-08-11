@@ -19,6 +19,7 @@ import com.google.appinventor.client.editor.simple.components.MockCompositeArran
 import com.google.appinventor.client.editor.simple.components.MockContactPicker;
 import com.google.appinventor.client.editor.simple.components.MockDatePicker;
 import com.google.appinventor.client.editor.simple.components.MockEmailPicker;
+import com.google.appinventor.client.editor.simple.components.MockForm;
 import com.google.appinventor.client.editor.simple.components.MockHorizontalArrangement;
 import com.google.appinventor.client.editor.simple.components.MockImage;
 import com.google.appinventor.client.editor.simple.components.MockImagePicker;
@@ -274,6 +275,8 @@ public final class SimpleComponentDescriptor {
     if (SimpleComponentDatabase.getInstance(editor.getProjectId()).getNonVisible(name)) {
       return new MockNonVisibleComponent(editor, name,
           getImageFromPath(SimpleComponentDatabase.getInstance(editor.getProjectId()).getIconName(name)));
+    } else if (name.equals(MockForm.TYPE)) {
+      return new MockForm(editor);
     } else if (name.equals(MockButton.TYPE)) {
       return new MockButton(editor);
     } else if (name.equals(MockCanvas.TYPE)) {

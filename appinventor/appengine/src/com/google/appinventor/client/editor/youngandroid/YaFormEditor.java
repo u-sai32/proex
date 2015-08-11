@@ -272,7 +272,7 @@ public final class YaFormEditor extends SimpleEditor implements FormChangeListen
   public SimplePalettePanel getComponentPalettePanel() {
     return palettePanel;
   }
-  
+
   @Override
   public SimpleNonVisibleComponentsPanel getNonVisibleComponentsPanel() {
     return nonVisibleComponentsPanel;
@@ -425,35 +425,39 @@ public final class YaFormEditor extends SimpleEditor implements FormChangeListen
    * Parses the JSON properties and creates the form and its component structure.
    */
   private MockForm createMockForm(JSONObject propertiesObject) {
-    return (MockForm) createMockComponent(propertiesObject, null);
+    MockForm mockForm = (MockForm) createMockComponent(propertiesObject, null);
+
+    for (MockComponent child : mockForm.getChildren()) {
+      if (!child.isVisibleComponent()) {
+        nonVisibleComponentsPanel.addComponent(child);
+      }
+    }
+
+    // This is for old project which doesn't have the AppName property of Form
+    if (!propertiesObject.getProperties().keySet().contains("AppName")) {
+      String fileId = getFileId();
+      String projectName = fileId.split("/")[3];
+      mockForm.changeProperty("AppName", projectName);
+    }
+
+    return mockForm;
   }
 
   /*
    * Parses the JSON properties and creates the component structure. This method is called
    * recursively for nested components. For the initial invocation parent shall be null.
    */
-  private MockComponent createMockComponent(JSONObject propertiesObject, MockContainer parent) {
+  public MockComponent createMockComponent(JSONObject propertiesObject, MockContainer parent) {
     Map<String, JSONValue> properties = propertiesObject.getProperties();
 
     // Component name and type
     String componentType = properties.get("$Type").asString().getString();
 
     // Instantiate a mock component for the visual designer
-    MockComponent mockComponent;
-    if (componentType.equals(MockForm.TYPE)) {
-      Preconditions.checkArgument(parent == null);
+    MockComponent mockComponent = SimpleComponentDescriptor.createMockComponent(componentType, this);
 
-      // Instantiate new root component
-      mockComponent = new MockForm(this);
-    } else {
-      mockComponent = SimpleComponentDescriptor.createMockComponent(componentType, this);
-
-      // Add the component to its parent component (and if it is non-visible, add it to the
-      // nonVisibleComponent panel).
+    if (parent != null) {
       parent.addComponent(mockComponent);
-      if (!mockComponent.isVisibleComponent()) {
-        nonVisibleComponentsPanel.addComponent(mockComponent);
-      }
     }
 
     // Set the name of the component (on instantiation components are assigned a generated name)
@@ -467,17 +471,10 @@ public final class YaFormEditor extends SimpleEditor implements FormChangeListen
       }
     }
 
-    //This is for old project which doesn't have the AppName property
-    if (!properties.keySet().contains("AppName")) {
-      String fileId = getFileId();
-      String projectName = fileId.split("/")[3];
-      mockComponent.changeProperty("AppName", projectName);
-    }
-
     // Add component type to the blocks editor
     YaProjectEditor yaProjectEditor = (YaProjectEditor) projectEditor;
-    YaBlocksEditor blockEditor = yaProjectEditor.getBlocksFileEditor(formNode.getFormName());
-    blockEditor.addComponent(mockComponent.getType(), mockComponent.getName(),
+    YaBlocksEditor yaBlocksEditor = yaProjectEditor.getBlocksFileEditor(formNode.getFormName());
+    yaBlocksEditor.addComponent(mockComponent.getType(), mockComponent.getName(),
         mockComponent.getUuid());
 
     // Add nested components
