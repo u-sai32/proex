@@ -15,6 +15,7 @@ import com.google.appinventor.client.editor.simple.components.MockButton;
 import com.google.appinventor.client.editor.simple.components.MockCanvas;
 import com.google.appinventor.client.editor.simple.components.MockCheckBox;
 import com.google.appinventor.client.editor.simple.components.MockComponent;
+import com.google.appinventor.client.editor.simple.components.MockCompositeArrangement;
 import com.google.appinventor.client.editor.simple.components.MockContactPicker;
 import com.google.appinventor.client.editor.simple.components.MockDatePicker;
 import com.google.appinventor.client.editor.simple.components.MockEmailPicker;
@@ -323,6 +324,8 @@ public final class SimpleComponentDescriptor {
       return new MockWebViewer(editor);
     } else if (name.equals(MockSpinner.TYPE)) {
       return new MockSpinner(editor);
+    } else if (name.equals(MockCompositeArrangement.TYPE)) {
+      return new MockCompositeArrangement(editor);
     } else {
       // TODO(user): add 3rd party mock component proxy here
       throw new UnsupportedOperationException("unknown component: " + name);
