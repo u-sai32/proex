@@ -47,4 +47,9 @@ public final class MockCompositeArrangement extends MockHVArrangement {
     return super.isPropertyVisible(propertyName);
   }
 
+  @Override
+  public boolean acceptableTarget() {
+    return false;
+  }
+
 }

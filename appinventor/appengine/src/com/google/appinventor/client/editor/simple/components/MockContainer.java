@@ -263,11 +263,24 @@ public abstract class MockContainer extends MockVisibleComponent implements Drop
     return false;
   }
 
+  /**
+   * Indicates whether this is an acceptable drop target.
+   *
+   * @return true if its ancestor containers are all acceptable, false otherwise
+   */
+  public boolean acceptableTarget() {
+    if (getContainer() == null) {
+      return true;
+    } else {
+      return getContainer().acceptableTarget();
+    }
+  }
+
   // TODO(user): Draw a colored border around the edges of the container
   //                    area while an eligible component is hovering over it.
   @Override
   public final boolean onDragEnter(DragSource source, int x, int y) {
-    boolean accept = acceptableSource(source);
+    boolean accept = acceptableSource(source) && acceptableTarget();
     if (accept) {
       layout.onDragEnter(x, y);
     }
