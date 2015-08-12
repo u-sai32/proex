@@ -36,15 +36,15 @@ public class MockHVArrangement extends MockContainer {
   protected final AbsolutePanel layoutWidget;
 
   private MockHVLayout myLayout;
-  
-  private static final String PROPERTY_NAME_HORIZONTAL_ALIGNMENT = "AlignHorizontal";
-  private static final String PROPERTY_NAME_VERTICAL_ALIGNMENT = "AlignVertical";
-  
+
+  protected static final String PROPERTY_NAME_HORIZONTAL_ALIGNMENT = "AlignHorizontal";
+  protected static final String PROPERTY_NAME_VERTICAL_ALIGNMENT = "AlignVertical";
+
   private YoungAndroidHorizontalAlignmentChoicePropertyEditor myHAlignmentPropertyEditor;
   private YoungAndroidVerticalAlignmentChoicePropertyEditor myVAlignmentPropertyEditor;
-  
+
   private boolean initialized = false;
-  
+
  /**
    * Creates a new MockHVArrangement component.
    */
@@ -59,7 +59,7 @@ public class MockHVArrangement extends MockContainer {
     // next instruction.  Note that the Helper methods are synchronized to avoid possible
     // future problems if we ever have threads creating arrangements in parallel.
     myLayout = MockHVArrangementHelper.getLayout();
-        
+
     if (orientation != ComponentConstants.LAYOUT_ORIENTATION_VERTICAL &&
         orientation != ComponentConstants.LAYOUT_ORIENTATION_HORIZONTAL) {
       throw new IllegalArgumentException("Illegal orientation: " + orientation);
@@ -83,7 +83,7 @@ public class MockHVArrangement extends MockContainer {
     initialized = true;
   }
 
-  
+
   @Override
   public void onPropertyChange(String propertyName, String newValue) {
     super.onPropertyChange(propertyName, newValue);
@@ -121,4 +121,3 @@ public class MockHVArrangement extends MockContainer {
     } else myVAlignmentPropertyEditor.enable();
   }
 }
-

@@ -34,4 +34,17 @@ public final class MockCompositeArrangement extends MockHVArrangement {
     return compositeArrangementNode;
   }
 
+  @Override
+  protected boolean isPropertyVisible(String propertyName) {
+    // hide all properties except Visible
+    if (propertyName.equals(PROPERTY_NAME_WIDTH) ||
+        propertyName.equals(PROPERTY_NAME_HEIGHT) ||
+        propertyName.equals(PROPERTY_NAME_HORIZONTAL_ALIGNMENT) ||
+        propertyName.equals(PROPERTY_NAME_VERTICAL_ALIGNMENT)) {
+      return false;
+    }
+
+    return super.isPropertyVisible(propertyName);
+  }
+
 }
