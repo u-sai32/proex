@@ -9,6 +9,8 @@ package com.google.appinventor.client.editor.simple.components;
 import com.google.appinventor.client.editor.simple.SimpleEditor;
 import com.google.appinventor.components.common.ComponentConstants;
 
+import com.google.gwt.user.client.ui.TreeItem;
+
 public final class MockCompositeArrangement extends MockHVArrangement {
 
   public static final String TYPE = "CompositeArrangement";
@@ -23,6 +25,13 @@ public final class MockCompositeArrangement extends MockHVArrangement {
   public MockCompositeArrangement(SimpleEditor editor) {
     super(editor, TYPE, images.extension(),
         ComponentConstants.LAYOUT_ORIENTATION_VERTICAL);
+  }
+
+  @Override
+  protected TreeItem buildTree() {
+    TreeItem compositeArrangementNode = super.buildTree();
+    compositeArrangementNode.removeItems();
+    return compositeArrangementNode;
   }
 
 }
