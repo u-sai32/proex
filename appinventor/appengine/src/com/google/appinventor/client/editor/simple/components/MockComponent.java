@@ -370,15 +370,6 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
   }
 
   /**
-   * Invoked after a component is added to a container
-   *
-   * Some subclasses may wish to override this method so as to do some actions
-   * that can only be done after they are added to a container
-   */
-  public void onAddedToContainer() {
-  }
-
-  /**
    * Returns a unique default component name.
    */
   private String componentName() {

@@ -147,6 +147,19 @@ public abstract class MockContainer extends MockVisibleComponent implements Drop
   }
 
   /**
+   * Invoked when a component is added to this container
+   * The default behavior is notfiy the parent container of this container, if any,
+   * which may have overrdden this method for additional behavior
+   *
+   * @param component component added to this container
+   */
+  protected void onComponentAdded(MockComponent component) {
+    if (getContainer() != null) {
+      getContainer().onComponentAdded(component);
+    }
+  }
+
+  /**
    * Adds a new component to the container at the specified index.
    *
    * @param component  component to be added
@@ -156,7 +169,6 @@ public abstract class MockContainer extends MockVisibleComponent implements Drop
   private void addComponent(MockComponent component, int beforeIndex) {
     // Set the container to be the parent of the component
     component.setContainer(this);
-    component.onAddedToContainer();
 
     // Add the component as a child component of the container
     if (beforeIndex == -1) {
@@ -175,6 +187,7 @@ public abstract class MockContainer extends MockVisibleComponent implements Drop
       refreshForm();
     }
 
+    onComponentAdded(component);
     getForm().fireComponentAdded(component);
   }
 
