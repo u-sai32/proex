@@ -8,6 +8,7 @@ package com.google.appinventor.server;
 
 import com.google.appinventor.server.storage.StorageIo;
 import com.google.appinventor.server.storage.StorageIoInstanceHolder;
+import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidComponentNode;
 import com.google.appinventor.shared.storage.StorageUtil;
 import com.google.appinventor.shared.rpc.BlocksTruncatedException;
 import com.google.appinventor.shared.rpc.component.Component;
@@ -27,7 +28,6 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.List;
 import java.util.logging.Logger;
-import java.util.Set;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 
@@ -129,6 +129,17 @@ public class ComponentServiceImpl extends OdeRemoteServiceServlet
     }
   }
 
+  @Override
+  public void deleteImportedComponent(String fullyQualifiedName, long projectId) {
+    String directory = "assets/external_comps/" + fullyQualifiedName + "/";
+    for (String fileId : storageIo.getProjectSourceFiles(userInfoProvider.getUserId(), projectId)) {
+      if (fileId.startsWith(directory)) {
+        storageIo.deleteFile(userInfoProvider.getUserId(), projectId, fileId);
+        storageIo.removeSourceFilesFromProject(userInfoProvider.getUserId(), projectId, false, fileId);
+      }
+    }
+  }
+
   private Map<String, byte[]> extractContents(InputStream inputStream)
       throws IOException {
     Map<String, byte[]> contents = new HashMap<String, byte[]>();
@@ -150,9 +161,14 @@ public class ComponentServiceImpl extends OdeRemoteServiceServlet
   private List<ProjectNode> importToProject(Map<String, byte[]> contents, long projectId,
       String folderPath) throws FileImporterException, IOException {
     List<ProjectNode> compNodes = new ArrayList<ProjectNode>();
+    List<String> sourceFiles = storageIo.getProjectSourceFiles(userInfoProvider.getUserId(), projectId);
     for (String name : contents.keySet()) {
       String destination = folderPath + "/external_comps/" + name;
-      FileNode fileNode = new FileNode(name, destination);
+      if (sourceFiles.contains(destination)) {  // Check if source File already contains component files
+        compNodes.clear();
+        return compNodes; // Fail the Import!!
+      }
+      FileNode fileNode = new YoungAndroidComponentNode(StorageUtil.basename(name), destination);
       fileImporter.importFile(userInfoProvider.getUserId(), projectId,
           destination, new ByteArrayInputStream(contents.get(name)));
       compNodes.add(fileNode);
