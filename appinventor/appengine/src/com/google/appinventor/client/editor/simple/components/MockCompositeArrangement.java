@@ -52,4 +52,13 @@ public final class MockCompositeArrangement extends MockHVArrangement {
     return false;
   }
 
+  @Override
+  protected void onComponentAdded(MockComponent component) {
+    super.onComponentAdded(component);
+    int[] eventBits = new int[]{Event.ONMOUSEDOWN, Event.ONMOUSEUP,
+        Event.ONMOUSEMOVE, Event.ONMOUSEOVER, Event.ONMOUSEOUT, Event.ONCLICK};
+    for (int eventBit : eventBits) {
+      component.unsinkEvents(eventBit);
+    }
+  }
 }
