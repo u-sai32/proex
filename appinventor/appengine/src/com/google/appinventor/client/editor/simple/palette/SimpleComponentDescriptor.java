@@ -272,9 +272,15 @@ public final class SimpleComponentDescriptor {
    * Instantiates mock component by name.
    */
   public static MockComponent createMockComponent(String name, SimpleEditor editor) {
-    if (SimpleComponentDatabase.getInstance(editor.getProjectId()).getNonVisible(name)) {
+    SimpleComponentDatabase compDatabase =
+        SimpleComponentDatabase.getInstance(editor.getProjectId());
+
+    if (compDatabase.getNonVisible(name)) {
       return new MockNonVisibleComponent(editor, name,
-          getImageFromPath(SimpleComponentDatabase.getInstance(editor.getProjectId()).getIconName(name)));
+          getImageFromPath(compDatabase.getIconName(name)));
+    } else if (compDatabase.isUserComponent(name)) {
+      return new MockCompositeArrangement(editor,
+          compDatabase.getComponentType(name), name);
     } else if (name.equals(MockForm.TYPE)) {
       return new MockForm(editor);
     } else if (name.equals(MockButton.TYPE)) {
@@ -327,8 +333,6 @@ public final class SimpleComponentDescriptor {
       return new MockWebViewer(editor);
     } else if (name.equals(MockSpinner.TYPE)) {
       return new MockSpinner(editor);
-    } else if (name.equals(MockCompositeArrangement.TYPE)) {
-      return new MockCompositeArrangement(editor);
     } else {
       // TODO(user): add 3rd party mock component proxy here
       throw new UnsupportedOperationException("unknown component: " + name);

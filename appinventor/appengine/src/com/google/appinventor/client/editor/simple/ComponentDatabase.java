@@ -322,6 +322,11 @@ class ComponentDatabase implements ComponentDatabaseInterface {
     return componentsJSONString;
   }
 
+  public boolean isUserComponent(String componentTypeName) {
+    // TODO: implement to have a thorough check
+    return getComponentType(componentTypeName).startsWith("appinventor.ai_");
+  }
+
   /*
    * Creates a component descriptor from the contents of the JSON file and puts
    * it in the components map.

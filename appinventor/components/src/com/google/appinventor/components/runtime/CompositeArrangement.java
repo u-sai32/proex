@@ -19,7 +19,7 @@ import com.google.appinventor.components.common.YaVersion;
  * It is not expected to be used elsewhere
  */
 @DesignerComponent(version = YaVersion.COMPOSITE_ARRANGEMENT_VERSION,
-    category = ComponentCategory.LAYOUT)
+    category = ComponentCategory.INTERNAL)
 @SimpleObject
 public class CompositeArrangement extends HVArrangement {
 
