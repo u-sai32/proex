@@ -312,7 +312,7 @@ public abstract class MockContainer extends MockVisibleComponent implements Drop
 
   @Override
   public final void onDrop(DragSource source, int x, int y, int offsetX, int offsetY) {
-    Preconditions.checkArgument(acceptableSource(source));
+    Preconditions.checkArgument(acceptableSource(source) && acceptableTarget());
 
     MockComponent sourceComponent;
     if (source instanceof MockComponent) {
