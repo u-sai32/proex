@@ -346,6 +346,30 @@ Blockly.Block.prototype.unselect = function() {
 };
 
 /**
+ * Hide this block.
+ */
+Blockly.Block.prototype.hideBlock = function() {
+  goog.asserts.assertObject(this.svg_, 'Block is not rendered.');
+  this.svg_.addHidden();
+};
+
+/**
+ * Hide this block.
+ */
+Blockly.Block.prototype.unhideBlock = function() {
+  goog.asserts.assertObject(this.svg_, 'Block is not rendered.');
+  this.svg_.removeHidden();
+};
+
+/**
+ * Check to see if this block is hidden.
+ */
+Blockly.Block.prototype.isHiddenBlock = function() {
+  goog.asserts.assertObject(this.svg_, 'Block is not rendered.');
+  return this.svg_.isHiddenBlock();
+};
+
+/**
  * Mark this block as Bad.  Highlight it visually in Red.
  */
 Blockly.Block.prototype.badBlock = function() {

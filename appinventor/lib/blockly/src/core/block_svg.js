@@ -443,6 +443,30 @@ Blockly.BlockSvg.prototype.updateDisabled = function() {
 };
 
 /**
+ * Hide this block.  Hide it visually.
+ */
+Blockly.BlockSvg.prototype.addHidden = function() {
+    Blockly.addClass_(/** @type {!Element} */ (this.svgGroup_),
+        'blocklyHidden');
+};
+
+/**
+ * Unhide this block.  Show it visually.
+ */
+Blockly.BlockSvg.prototype.removeHidden = function() {
+    Blockly.removeClass_(/** @type {!Element} */ (this.svgGroup_),
+        'blocklyHidden');
+};
+
+/**
+ * Check to see if the block is hidden.
+ */
+Blockly.BlockSvg.prototype.isHiddenBlock = function() {
+    return Blockly.haveClass_(/** @type {!Element} */ (this.svgGroup_),
+        'blocklyHidden');
+}
+
+/**
  * Select this block.  Highlight it visually.
  */
 Blockly.BlockSvg.prototype.addSelect = function() {
