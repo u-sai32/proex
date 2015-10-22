@@ -6,6 +6,12 @@
 
 package com.google.appinventor.components.runtime;
 
+import android.net.Uri;
+import android.hardware.Camera;
+import android.hardware.Camera.CameraInfo;
+import android.view.Surface;
+import android.view.SurfaceHolder;
+import android.view.SurfaceView;
 import com.google.appinventor.components.annotations.DesignerComponent;
 import com.google.appinventor.components.annotations.DesignerProperty;
 import com.google.appinventor.components.annotations.PropertyCategory;
@@ -20,13 +26,17 @@ import com.google.appinventor.components.common.PropertyTypeConstants;
 import com.google.appinventor.components.common.YaVersion;
 import com.google.appinventor.components.runtime.collect.Sets;
 import com.google.appinventor.components.runtime.util.BoundingBox;
+import com.google.appinventor.components.runtime.util.EclairUtil;
 import com.google.appinventor.components.runtime.util.ErrorMessages;
 import com.google.appinventor.components.runtime.util.FileUtil;
+import com.google.appinventor.components.runtime.util.FroyoUtil;
+import com.google.appinventor.components.runtime.util.GingerbreadUtil;
 import com.google.appinventor.components.runtime.util.MediaUtil;
 import com.google.appinventor.components.runtime.util.PaintUtil;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.graphics.Bitmap;
 import android.graphics.Color;
 import android.graphics.Paint;
@@ -39,6 +49,7 @@ import android.util.Log;
 import android.view.GestureDetector;
 import android.view.MotionEvent;
 import android.view.View;
+import com.google.appinventor.components.runtime.util.SdkLevel;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -91,8 +102,9 @@ import java.util.Set;
     category = ComponentCategory.ANIMATION)
 @SimpleObject
 @UsesPermissions(permissionNames = "android.permission.INTERNET," +
+                 "android.permission.CAMERA," +
                  "android.permission.WRITE_EXTERNAL_STORAGE")
-public final class Canvas extends AndroidViewComponent implements ComponentContainer {
+public final class Canvas extends AndroidViewComponent implements ComponentContainer, OnStopListener {
   private static final String LOG_TAG = "Canvas";
 
   private final Activity context;
@@ -102,12 +114,17 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
   // something has been drawn on it.
   private boolean drawn;
 
+  private Uri imageFile;
+
   // Variables behind properties
   private int paintColor;
   private final Paint paint;
   private int backgroundColor;
   private String backgroundImagePath = "";
   private int textAlignment;
+  private boolean cameraFeed = false;
+  private boolean cameraUseFront = false;
+  private int cameraOrientation = 0;
 
   // Default values
   private static final int MIN_WIDTH_HEIGHT = 1;
@@ -126,6 +143,9 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
 
   // Handle fling events
   private final GestureDetector mGestureDetector;
+
+  //Handle camera feed
+  private final CameraController cameraController;
 
   // The canvas has built-in detectors that trigger on touch, drag, touchDown,
   // TouchUp and Fling gestures.  It also maintains a set of additional gesture detectors
@@ -339,17 +359,385 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
     }
   }
 
+
+  class CameraController {
+
+    private int cameraId = -1;
+    private Camera camera = null;
+    private boolean previewing = false; // Is CanvasView Previewing the feed from Camera
+
+
+    public boolean setCameraFeed() {
+
+      if (view == null || !view.surfaceCreated) {
+        return false;
+      }
+
+      if (camera == null || cameraId == -1) {
+        openCamera();
+      }
+
+      if (camera == null) {
+        return false; // Camera not acquired, cancel operation.
+      }
+
+      if (previewing) {
+        unsetCameraFeed(false);
+      }
+
+      // Set Camera parameters for best supported preview size.
+
+        setCameraParameters();
+
+      // Set Camera Orientation
+
+      try {
+        camera.setPreviewDisplay(view.getHolder());
+        camera.startPreview();
+        previewing = true;
+
+      } catch (IOException exception) {
+        Log.d("MIT","Error in setPreviewDisplay " + exception.getMessage());
+        //form . dispatchErrorOccurredEvent ?
+        unsetCameraFeed(true);
+        return previewing;
+      }
+
+      return previewing;
+
+    }
+
+    public void unsetCameraFeed(boolean releaseCamera) {
+      if (camera == null) {
+        return;
+      }
+      camera.stopPreview();
+      previewing = false;
+      if (releaseCamera) {
+        releaseCamera();
+      }
+    }
+
+    public boolean resetCameraFeed() {
+      if (cameraFeed) {
+        setCameraFeed();
+      }
+      else {
+        unsetCameraFeed(true);
+      }
+      return cameraFeed;
+    }
+
+    private void openCamera() {
+      if (camera != null) {
+        releaseCamera();
+      }
+      cameraId = getCameraId();
+      try {
+        if (SdkLevel.getLevel() >= SdkLevel.LEVEL_GINGERBREAD && cameraId > 0) {
+          camera = GingerbreadUtil.cameraOpen(cameraId);
+        }
+        else {
+          camera = Camera.open();
+        }
+      } catch (RuntimeException exception) {
+        Log.d("MIT","Error in Opening Camera " + exception.getMessage());
+        camera = null;
+      }
+      if (camera == null) {
+        releaseCamera();
+      }
+    }
+
+    private void releaseCamera() {
+      if (camera == null) {
+        cameraId = -1;
+        previewing = false;
+        return;
+      }
+      if (previewing) {
+        unsetCameraFeed(false);
+      }
+      camera.release();
+      camera = null;
+      cameraId = -1;
+    }
+
+    private int getCameraId() {
+      int camId = -1;
+      int camCount = getNumberOfCameras();
+      if (camCount >= 0) {
+        camId = 0;
+      }
+      if (SdkLevel.getLevel() >= SdkLevel.LEVEL_GINGERBREAD) {
+        CameraInfo camInfo = GingerbreadUtil.newCameraInfo();
+        for (int cId = 0; cId < camCount; cId++) {
+          GingerbreadUtil.getCameraInfo(cId, camInfo);
+          if (cameraUseFront && camInfo.facing == CameraInfo.CAMERA_FACING_FRONT) {
+            camId = cId;
+          } else if (!cameraUseFront && camInfo.facing == CameraInfo.CAMERA_FACING_BACK) {
+            camId = cId;
+          }
+        }
+      }
+      return camId;
+    }
+
+    private int getNumberOfCameras() {
+      // No definite way for checking camera feature for devices with API less than 5 (ECLAIR)
+      int camNum = 1; //Assume 1 Camera Exists
+      if (SdkLevel.getLevel() >= SdkLevel.LEVEL_ECLAIR) {
+        camNum = EclairUtil.hasSystemFeature(PackageManager.FEATURE_CAMERA, container.$form()) ? 1 : 0;
+      }
+      if (SdkLevel.getLevel() >= SdkLevel.LEVEL_GINGERBREAD) {
+        camNum = GingerbreadUtil.getNumberOfCameras();
+      }
+      return camNum;
+    }
+
+    private boolean setCameraParameters() {
+      if (camera == null) {
+        return false;
+      }
+      Camera.Parameters params = camera.getParameters();
+      int camOrientation = getCameraOrientation(cameraId);
+      int dispRotation = getDisplayRotation();
+      int previewOrientation = getPreviewOrientation(cameraId, camOrientation, dispRotation);
+      int imageRotation = getImageRotation(cameraId, camOrientation, dispRotation);
+      setPreviewOrientation(previewOrientation);
+      setImageRotation(params, imageRotation);
+
+      if (SdkLevel.getLevel() >= SdkLevel.LEVEL_ECLAIR) {
+        Camera.Size picSize = getBestPictureSize(EclairUtil.getCameraSupportedPictureSizes(params));
+
+        double targetAspectRatio = (double) picSize.width / (double) picSize.height;
+        Camera.Size preSize = getBestPreviewSize(EclairUtil.getCameraSupportedPreviewSizes(params), targetAspectRatio);
+        //Camera.Size preSize = getMaxPreviewSize(EclairUtil.getCameraSupportedPreviewSizes(params), targetAspectRatio);
+
+        params.setPreviewSize(preSize.width, preSize.height);
+        params.setPictureSize(picSize.width, picSize.height);
+      }
+
+      camera.setParameters(params);
+      return true;
+    }
+
+    /**
+     * Gets the Camera's Highest Resolution Capture
+     * @param sizes
+     * @return
+     */
+    private Camera.Size getBestPictureSize(List<Camera.Size> sizes) {
+      Camera.Size result = null;
+      int area = 0;
+      for (Camera.Size size : sizes) {
+        Log.d("MIT", "SupportedPicture Size ="+size.width+"x"+size.height);
+        int newArea = size.width * size.height;
+        if (newArea > area) {
+          result = size;
+          area = newArea;
+        }
+      }
+
+      Log.d("MIT", "Picture Size Selected = " + result.width + "x" + result.height);
+
+      return result;
+    }
+
+    private Camera.Size getBestPreviewSize(List<Camera.Size> sizes, double targetAspectRatio) {
+
+      if (sizes == null) {
+        return null;
+      }
+
+      final double ASPECT_TOLERANCE = 0.5;
+      Camera.Size result = null;
+      double minDiff = Double.MAX_VALUE;
+
+      for (Camera.Size size : sizes) {
+        Log.d("MIT", "SupportedPreview Size ="+size.width+"x"+size.height);
+        double ratio = (double) size.width / (double) size.height;
+        if (Math.abs(ratio - targetAspectRatio) > ASPECT_TOLERANCE) {
+          continue;
+        }
+        if (Math.abs(size.height - getView().getHeight()) < minDiff) {
+          result = size;
+          minDiff = Math.abs(size.height - getView().getHeight());
+        }
+      }
+
+      // No Preview Size matching Aspect Ratio
+      // We will select the largest fitting Preview Size
+      if (result == null) {
+        Log.d("MIT", "No preview size with target aspect ratio");
+        minDiff = Double.MAX_VALUE;
+        for (Camera.Size size : sizes) {
+          if (Math.abs(size.height - getView().getHeight()) < minDiff) {
+            result = size;
+            minDiff = Math.abs(size.height - getView().getHeight());
+          }
+        }
+      }
+
+      Log.d("MIT", "Preview Size Selected = " + result.width + "x" + result.height);
+
+      return result;
+    }
+
+    private Camera.Size getMaxPreviewSize(List<Camera.Size> sizes, double targetAspectRatio) {
+      Camera.Size result = null;
+      final double ASPECT_TOLERANCE = 5.0;
+      double minDiff = Double.MAX_VALUE;
+      for (Camera.Size size : sizes) {
+        double ratio = (double) size.width / size.height;
+        if (Math.abs(ratio - targetAspectRatio) > ASPECT_TOLERANCE) continue;
+        if ((size.height - getView().getHeight()) < minDiff ) {
+          result = size;
+          minDiff = Math.abs(size.height - getView().getHeight());
+        }
+      }
+      Log.d("MIT", "Max Preview Size Selected = " + result.width + "x" + result.height);
+      return result;
+    }
+
+    private int getCameraOrientation(int camId) {
+      int orientation = 0;
+      switch (cameraOrientation) {
+        case 0: // Automatic Orientation
+          if (SdkLevel.getLevel() >= SdkLevel.LEVEL_GINGERBREAD) {
+            CameraInfo camInfo = GingerbreadUtil.newCameraInfo();
+            GingerbreadUtil.getCameraInfo(camId, camInfo);
+            orientation = camInfo.orientation;
+          } else {
+            orientation = 90; // This is bad assumption but most manufacturers seem to mount the camera at 90
+          }
+          break;
+        case 1: // Top
+          orientation = 0;
+          break;
+        case 2: // Right
+          orientation = 90;
+          break;
+        case 3: // Bottom
+          orientation = 180;
+          break;
+        case 4: // Left
+          orientation = 270;
+          break;
+      }
+
+      Log.d("MIT", "Camera Orientation =" + orientation);
+      return orientation;
+      }
+
+    private int getDisplayRotation() {
+      int rotation = 0;
+      int degrees = 0;
+
+      if (SdkLevel.getLevel() >= SdkLevel.LEVEL_FROYO) {
+        rotation = FroyoUtil.getRotation($form().getWindowManager().getDefaultDisplay());
+      }
+      else {
+        rotation = $form().getWindowManager().getDefaultDisplay().getOrientation();
+      }
+      switch (rotation) {
+        case Surface.ROTATION_0:
+          degrees = 0;
+          break;
+        case Surface.ROTATION_90:
+          degrees = 90;
+          break;
+        case Surface.ROTATION_180:
+          degrees = 180;
+          break;
+        case Surface.ROTATION_270:
+          degrees = 270;
+          break;
+      }
+      Log.d("MIT", "Display Rotation =" + rotation);
+      return degrees;
+    }
+
+    private int getPreviewOrientation(int camId, int camOrientation, int dispRotation) {
+      int result = 0;
+      Log.d("MIT"," :: CamOrientation=" + camOrientation + " rotation=" + dispRotation);
+      if (SdkLevel.getLevel() >= SdkLevel.LEVEL_GINGERBREAD) {
+        CameraInfo cameraInfo = GingerbreadUtil.newCameraInfo();
+        GingerbreadUtil.getCameraInfo(camId, cameraInfo);
+        if (cameraInfo.facing == CameraInfo.CAMERA_FACING_FRONT) {
+          result = ( camOrientation + dispRotation )  % 360;
+          result = ( 360 - result ) % 360;
+        }
+        else {
+          result = ( camOrientation - dispRotation + 360 )  % 360;
+        }
+      }
+      else {
+        result = ( camOrientation - dispRotation + 360 )  % 360;
+      }
+      Log.d("MIT", "Preview Orientation =" + result);
+      return result;
+    }
+
+    private int getImageRotation(int camId, int camOrientation, int dispRotation) {
+      int result = 0;
+      Log.d("MIT"," :: CamOrientation=" + camOrientation + " rotation=" + dispRotation);
+      if (SdkLevel.getLevel() > SdkLevel.LEVEL_GINGERBREAD) {
+        CameraInfo cameraInfo = GingerbreadUtil.newCameraInfo();
+        GingerbreadUtil.getCameraInfo(camId, cameraInfo);
+        if (cameraInfo.facing == CameraInfo.CAMERA_FACING_FRONT) {
+          result = ( camOrientation - dispRotation + 360 )  % 360;
+        }
+        else {
+          result = ( camOrientation + dispRotation )  % 360;
+        }
+      }
+      else {
+        result = ( camOrientation + dispRotation )  % 360;
+      }
+      Log.d("MIT", "Image Rotation =" + result);
+      return result;
+    }
+
+    private boolean setPreviewOrientation(int previewOrientation) {
+      if (camera == null) {
+        return false;
+      }
+      if (SdkLevel.getLevel() >= SdkLevel.LEVEL_FROYO) {
+        camera.setDisplayOrientation(previewOrientation);
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+
+    private boolean setImageRotation(Camera.Parameters params, int imageRotation) {
+      if (SdkLevel.getLevel() >= SdkLevel.LEVEL_ECLAIR) {
+        EclairUtil.setCameraParameterRotation(params, imageRotation);
+        return true;
+      }
+      else {
+        return false;
+      }
+    }
+
+  }
+
   /**
    * Panel for drawing and manipulating sprites.
    *
    */
-  private final class CanvasView extends View {
+  private final class CanvasView extends SurfaceView implements SurfaceHolder.Callback {
     // Variables to implement View
     private android.graphics.Canvas canvas;
     private Bitmap bitmap;  // Bitmap backing Canvas
 
     // Support for background images
     private BitmapDrawable backgroundDrawable;
+
+    //Check whether Surface is Ready for Camera Feed
+    private boolean surfaceCreated = false;
 
     // Support for GetBackgroundPixelColor() and GetPixelColor().
 
@@ -676,6 +1064,31 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
         return Component.COLOR_NONE;
       }
     }
+
+    @Override
+    public void surfaceCreated(SurfaceHolder surfaceHolder) {
+      surfaceCreated = true;
+      Log.d("MIT","SurfaceCreated");
+    }
+
+    @Override
+    public void surfaceChanged(SurfaceHolder surfaceHolder, int format, int width, int height) {
+      Log.d("MIT","SurfaceChanged Size " + width + "x" + height);
+      Log.d("MIT","Canvas Size " + Width() + "x" + Height());
+      Log.d("MIT","CanvasView Size " + view.getWidth() + "x" + view.getHeight());
+      cameraController.resetCameraFeed();
+
+    }
+
+    @Override
+    public void surfaceDestroyed(SurfaceHolder surfaceHolder) {
+      if (cameraController.previewing) {
+        cameraController.unsetCameraFeed(true);
+      }
+      surfaceCreated = false;
+    }
+
+
   }
 
   public Canvas(ComponentContainer container) {
@@ -684,7 +1097,14 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
 
     // Create view and add it to its designated container.
     view = new CanvasView(context);
+    // To know when the SurfaceView is ready for Camera Feed
+    view.getHolder().addCallback(view);
+    // This method is deprecated for API 11 and above, it is ignored and set automatically
+    view.getHolder().setType(SurfaceHolder.SURFACE_TYPE_PUSH_BUFFERS);
+
+
     container.$add(this);
+    $form().registerForOnStop(this);
 
     paint = new Paint();
     paint.setFlags(Paint.ANTI_ALIAS_FLAG);
@@ -699,6 +1119,10 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
     sprites = new LinkedList<Sprite>();
     motionEventParser = new MotionEventParser();
     mGestureDetector = new GestureDetector(context, new FlingGestureListener());
+    cameraController = new CameraController();
+
+    Log.d("MIT", "Canvas Component Constructed Size " + Width() + " " + Height());
+
   }
 
   @Override
@@ -1102,6 +1526,71 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
     }
   }
 
+  /**
+   *
+   * @return true if Camera Live Feed is Enabled
+   */
+  @SimpleProperty(
+      description = "Specifies whether to use the Canvas for Camera Preview"
+  )
+  public boolean CameraFeed() {
+    return cameraFeed;
+  }
+  /**
+   * Specify whether to enable or disable Live Feed from Camera
+   * @param camFeed true to enable
+   */
+  @DesignerProperty(editorType = PropertyTypeConstants.PROPERTY_TYPE_BOOLEAN,
+      defaultValue = "False")
+  @SimpleProperty
+  public void CameraFeed(boolean camFeed) {
+    cameraFeed = camFeed;
+  }
+
+  /**
+   * Returns true if the front-facing camera is to be used (when available)
+   *
+   * @return {@code true} indicates front-facing is to be used, {@code false} will open default
+   */
+  @SimpleProperty(description = "Specifies whether the front-facing camera should be used (when available). "
+      + "If the device does not have a front-facing camera, this option will be ignored "
+      + "and the camera will open normally.")
+  public boolean CameraUseFront(){
+    return cameraUseFront;
+  }
+
+  /**
+   * Specifies whether the front-facing camera should be used (when available)
+   *
+   * @param front
+   *          {@code true} for front-facing camera, {@code false} for default
+   */
+  @DesignerProperty(editorType = PropertyTypeConstants.PROPERTY_TYPE_BOOLEAN, defaultValue = "False")
+  @SimpleProperty
+  public void CameraUseFront(boolean useFront) {
+    cameraUseFront = useFront;
+  }
+
+  @SimpleProperty(description = "This represents the angle the camera image needs to be rotated clockwise "
+      + "to show correctly on the display in its natural orientation. This should be almost always Automatic. "
+      + "This property is device specific. This should only be used to correct wrong orientation in older devices."
+      + "The valid values should be 0 = Automatic,  1 = Top (0), 2 = Right(90), 3 = Bottom(180), 4 = Left(270)")
+  public int CameraOrientation() {
+    return cameraOrientation;
+  }
+
+  @DesignerProperty(editorType = PropertyTypeConstants.PROPERTY_TYPE_CAMERA_ORIENTATION,
+      defaultValue = Component.CAMERA_ORIENTATION_AUTOMATIC + "")
+  @SimpleProperty
+  public void CameraOrientation(int orientation){
+    if(orientation >= 0 && orientation < 5  ){
+      cameraOrientation = orientation;
+    }
+    else {
+      $form().dispatchErrorOccurredEvent(this, "Camera Orientation",
+          ErrorMessages.ERROR_CANVAS_CAMERA_ORIENTATION_ERROR, cameraOrientation);
+    }
+  }
 
   // Methods supporting event handling
 
@@ -1475,6 +1964,14 @@ public final class Canvas extends AndroidViewComponent implements ComponentConta
       }
       Flung(x, y, speed, heading, vx, vy, spriteHandledFling);
       return true;
+    }
+  }
+
+  @Override
+  public void onStop() {
+    if(cameraController.previewing) {
+      cameraController.unsetCameraFeed(true);
+      cameraController.previewing = false;
     }
   }
 }

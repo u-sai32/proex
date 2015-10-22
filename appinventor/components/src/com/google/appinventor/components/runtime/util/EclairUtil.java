@@ -5,6 +5,7 @@
 // http://www.apache.org/licenses/LICENSE-2.0
 package com.google.appinventor.components.runtime.util;
 
+import android.hardware.Camera;
 import com.google.appinventor.components.runtime.WebViewer;
 
 import android.app.Activity;
@@ -19,6 +20,8 @@ import android.webkit.GeolocationPermissions.Callback;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
+
+import java.util.List;
 
 /**
  * Helper methods for calling methods added in Eclair (2.0, API level 5)
@@ -103,5 +106,22 @@ public class EclairUtil {
   public static String getInstallerPackageName(String pname, Activity form) {
     return form.getPackageManager().getInstallerPackageName(pname);
   }
+
+  public static boolean hasSystemFeature(String fname, Activity form){
+    return form.getPackageManager().hasSystemFeature(fname);
+  }
+
+  public static List<Camera.Size> getCameraSupportedPreviewSizes(Camera.Parameters params){
+    return params.getSupportedPreviewSizes();
+  }
+
+  public static List<Camera.Size> getCameraSupportedPictureSizes(Camera.Parameters params){
+    return params.getSupportedPictureSizes();
+  }
+
+  public static void setCameraParameterRotation(Camera.Parameters params, int rotation){
+    params.setRotation(rotation);
+  }
+
 
 }

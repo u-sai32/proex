@@ -109,6 +109,7 @@ public final class ErrorMessages {
   public static final int ERROR_CANVAS_BITMAP_ERROR = 1001;
   public static final int ERROR_CANVAS_WIDTH_ERROR = 1002;
   public static final int ERROR_CANVAS_HEIGHT_ERROR = 1003;
+  public static final int ERROR_CANVAS_CAMERA_ORIENTATION_ERROR = 1004;
   // Web errors
   public static final int ERROR_WEB_UNABLE_TO_GET = 1101;
   public static final int ERROR_WEB_UNSUPPORTED_ENCODING = 1102;
