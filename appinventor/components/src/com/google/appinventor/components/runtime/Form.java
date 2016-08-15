@@ -92,7 +92,7 @@ import com.google.appinventor.components.runtime.util.ViewUtil;
  */
 @DesignerComponent(version = YaVersion.FORM_COMPONENT_VERSION,
     category = ComponentCategory.LAYOUT,
-    description = "Top-level component containing all other components in the program",
+    description = "Top-level component containing all other components in a screen",
     showOnPalette = false)
 @SimpleObject
 @UsesPermissions(permissionNames = "android.permission.INTERNET,android.permission.ACCESS_WIFI_STATE,android.permission.ACCESS_NETWORK_STATE")
@@ -105,6 +105,8 @@ public class Form extends Activity
   private static final String RESULT_NAME = "APP_INVENTOR_RESULT";
 
   private static final String ARGUMENT_NAME = "APP_INVENTOR_START";
+
+  public static final String SERVICE_ARG = "SERVICE_START_ARGUMENT";
 
   public static final String APPINVENTOR_URL_SCHEME = "appinventor";
 
@@ -496,7 +498,7 @@ public class Form extends Activity
 
   // functionName is a string to include in the error message that will be shown
   // if the JSON decoding fails
-  private  static Object decodeJSONStringForForm(String jsonString, String functionName) {
+  public  static Object decodeJSONStringForForm(String jsonString, String functionName) {
     Log.i(LOG_TAG, "decodeJSONStringForForm -- decoding JSON representation:" + jsonString);
     Object valueFromJSON = "";
     try {
@@ -1553,13 +1555,43 @@ public class Form extends Activity
   // ComponentContainer implementation
 
   @Override
-  public Activity $context() {
-    return this;
+  public Context $context() {
+    return this.getApplicationContext();
   }
 
   @Override
   public Form $form() {
     return this;
+  }
+
+  @Override
+  public Task $task() {
+    return null;
+  }
+
+  @Override
+  public boolean isContext() {
+    return true;
+  }
+
+  @Override
+  public boolean isForm() {
+    return true;
+  }
+
+  @Override
+  public boolean isTask() {
+    return false;
+  }
+
+  @Override
+  public boolean inForm() {
+    return isForm();
+  }
+
+  @Override
+  public boolean inTask() {
+    return isTask();
   }
 
   @Override

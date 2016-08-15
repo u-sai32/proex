@@ -441,9 +441,9 @@ public class ActivityStarter extends AndroidNonvisibleComponent
         ErrorMessages.ERROR_ACTIVITY_STARTER_NO_ACTION_INFO);
     } else {
       try {
-        container.$context().startActivityForResult(intent, requestCode);
+        container.$form().startActivityForResult(intent, requestCode);
         String openAnim = container.$form().getOpenAnimType();
-        AnimationUtil.ApplyOpenScreenAnimation(container.$context(), openAnim);
+        AnimationUtil.ApplyOpenScreenAnimation(container.$form(), openAnim);
       } catch (ActivityNotFoundException e) {
         form.dispatchErrorOccurredEvent(this, "StartActivity",
           ErrorMessages.ERROR_ACTIVITY_STARTER_NO_CORRESPONDING_ACTIVITY);
