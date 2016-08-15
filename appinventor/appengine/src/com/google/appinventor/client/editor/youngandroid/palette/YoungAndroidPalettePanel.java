@@ -9,12 +9,14 @@ package com.google.appinventor.client.editor.youngandroid.palette;
 import com.google.appinventor.client.ComponentsTranslation;
 import com.google.appinventor.client.TranslationDesignerPallete;
 import com.google.appinventor.client.editor.simple.SimpleComponentDatabase;
+import com.google.appinventor.client.editor.simple.SimpleEditor;
 import com.google.appinventor.client.editor.simple.components.MockComponent;
 import com.google.appinventor.client.editor.simple.components.utils.PropertiesUtil;
 import com.google.appinventor.client.editor.simple.palette.DropTargetProvider;
 import com.google.appinventor.client.editor.simple.palette.SimpleComponentDescriptor;
 import com.google.appinventor.client.editor.simple.palette.SimplePaletteItem;
 import com.google.appinventor.client.editor.simple.palette.SimplePalettePanel;
+import com.google.appinventor.client.editor.youngandroid.YaContextEditor;
 import com.google.appinventor.client.editor.youngandroid.YaFormEditor;
 import com.google.appinventor.client.explorer.project.ComponentDatabaseChangeListener;
 import com.google.appinventor.client.wizards.ComponentImportWizard;
@@ -45,7 +47,7 @@ public class YoungAndroidPalettePanel extends Composite implements SimplePalette
   private final SimpleComponentDatabase COMPONENT_DATABASE;
 
   // Associated editor
-  private final YaFormEditor editor;
+  private final YaContextEditor editor;
 
   private final Map<ComponentCategory, PaletteHelper> paletteHelpers;
 
@@ -61,7 +63,7 @@ public class YoungAndroidPalettePanel extends Composite implements SimplePalette
    *
    * @param editor parent editor of this panel
    */
-  public YoungAndroidPalettePanel(YaFormEditor editor) {
+  public YoungAndroidPalettePanel(YaContextEditor editor) {
     this.editor = editor;
     COMPONENT_DATABASE = SimpleComponentDatabase.getInstance(editor.getProjectId());
 

@@ -1,6 +1,5 @@
 // -*- mode: java; c-basic-offset: 2; -*-
-// Copyright 2009-2011 Google, All Rights reserved
-// Copyright 2011-2012 MIT, All rights reserved
+// Copyright 2016 MIT, All rights reserved
 // Released under the Apache License, Version 2.0
 // http://www.apache.org/licenses/LICENSE-2.0
 
@@ -14,14 +13,15 @@ import com.google.appinventor.client.OdeAsyncCallback;
 import com.google.appinventor.client.editor.FileEditor;
 import com.google.appinventor.client.editor.ProjectEditor;
 import com.google.appinventor.client.explorer.project.Project;
+import com.google.appinventor.client.output.OdeLog;
 import com.google.appinventor.client.widgets.LabeledTextBox;
 import com.google.appinventor.client.youngandroid.TextValidators;
 import com.google.appinventor.shared.rpc.project.ProjectNode;
 import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidBlocksNode;
-import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidFormNode;
+import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidSourceNode;
+import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidTaskNode;
 import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidPackageNode;
 import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidProjectNode;
-import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidSourceNode;
 import com.google.gwt.core.client.Scheduler;
 import com.google.gwt.event.dom.client.ClickEvent;
 import com.google.gwt.event.dom.client.ClickHandler;
@@ -39,19 +39,17 @@ import java.util.HashSet;
 import java.util.Set;
 
 /**
- * A command that creates a new form.
- *
- * @author lizlooney@google.com (Liz Looney)
+ * A command that creates a new task.
  */
-public final class AddFormCommand extends ChainableCommand {
+public final class AddTaskCommand extends ChainableCommand {
 
 
-  private static final int MAX_FORM_COUNT = 10;
+  private static final int MAX_TASK_COUNT = 1; // This has to be incremented.
 
   /**
-   * Creates a new command for creating a new form
+   * Creates a new command for creating a new task
    */
-  public AddFormCommand() {
+  public AddTaskCommand() {
   }
 
   @Override
@@ -62,7 +60,7 @@ public final class AddFormCommand extends ChainableCommand {
   @Override
   public void execute(ProjectNode node) {
     if (node instanceof YoungAndroidProjectNode) {
-      new NewFormDialog((YoungAndroidProjectNode) node).center();
+      new NewTaskDialog((YoungAndroidProjectNode) node).center();
     } else {
       executionFailedOrCanceled();
       throw new IllegalArgumentException("node must be a YoungAndroidProjectNode");
@@ -72,32 +70,32 @@ public final class AddFormCommand extends ChainableCommand {
   /**
    * Dialog for getting the name for the new form.
    */
-  private class NewFormDialog extends DialogBox {
+  private class NewTaskDialog extends DialogBox {
     // UI elements
     private final LabeledTextBox newNameTextBox;
 
     private final Set<String> otherContextNames;
 
-    NewFormDialog(final YoungAndroidProjectNode projectRootNode) {
+    NewTaskDialog(final YoungAndroidProjectNode projectRootNode) {
       super(false, true);
 
       setStylePrimaryName("ode-DialogBox");
-      setText(MESSAGES.newFormTitle());
+      setText(MESSAGES.newTaskTitle());
       VerticalPanel contentPanel = new VerticalPanel();
 
-      final String prefix = "Screen";
+      final String prefix = "Task";
       final int prefixLength = prefix.length();
       int highIndex = 0;
-      int formCount = 0;
-      // Collect the existing form names so we can prevent duplicate form names.
+      int taskCount = 0;
+      // Collect the existing task names so we can prevent duplicate task names.
       otherContextNames = new HashSet<String>();
 
       for (ProjectNode source : projectRootNode.getAllSourceNodes()) {
         if (source instanceof YoungAndroidSourceNode) {
           String contextName = ((YoungAndroidSourceNode) source).getContextName();
           otherContextNames.add(contextName);
-          if (source instanceof YoungAndroidFormNode) {
-            formCount++;
+          if (source instanceof YoungAndroidTaskNode) {
+            taskCount++;
             if (contextName.startsWith(prefix)) {
               try {
                 highIndex = Math.max(highIndex, Integer.parseInt(contextName.substring(prefixLength)));
@@ -106,13 +104,14 @@ public final class AddFormCommand extends ChainableCommand {
               }
             }
           }
+
         }
       }
 
-      String defaultFormName = prefix + (highIndex + 1);
+      String defaultTaskName = prefix + (highIndex + 1);
 
-      newNameTextBox = new LabeledTextBox(MESSAGES.formNameLabel());
-      newNameTextBox.setText(defaultFormName);
+      newNameTextBox = new LabeledTextBox(MESSAGES.taskNameLabel());
+      newNameTextBox.setText(defaultTaskName);
       newNameTextBox.getTextBox().addKeyUpHandler(new KeyUpHandler() {
         @Override
         public void onKeyUp(KeyUpEvent event) {
@@ -130,20 +129,17 @@ public final class AddFormCommand extends ChainableCommand {
       String cancelText = MESSAGES.cancelButton();
       String okText = MESSAGES.okButton();
 
-      // Keeps track of the total number of screens.
-      formCount = formCount + 1;
-      if (formCount > MAX_FORM_COUNT) {
+      // Keeps track of the total number of tasks.
+      taskCount = taskCount + 1;
+      if (taskCount > MAX_TASK_COUNT) {
         HorizontalPanel errorPanel = new HorizontalPanel();
-        HTML tooManyScreensLabel = new HTML(MESSAGES.formCountErrorLabel());
-        errorPanel.add(tooManyScreensLabel);
+        HTML tooManyTasksLabel = new HTML(MESSAGES.formCountErrorLabel());
+        errorPanel.add(tooManyTasksLabel);
         errorPanel.setSize("100%", "24px");
         contentPanel.add(errorPanel);
 
         okText = MESSAGES.addScreenButton();
         cancelText = MESSAGES.cancelScreenButton();
-
-        // okText = "Add";
-        // cancelText = "Don't Add";
       }
 
       Button cancelButton = new Button(cancelText);
@@ -172,25 +168,25 @@ public final class AddFormCommand extends ChainableCommand {
     }
 
     private void handleOkClick(YoungAndroidProjectNode projectRootNode) {
-      String newFormName = newNameTextBox.getText();
-      if (validate(newFormName)) {
+      String newTaskName = newNameTextBox.getText();
+      if (validate(newTaskName)) {
         hide();
-        addFormAction(projectRootNode, newFormName);
+        addTaskAction(projectRootNode, newTaskName);
       } else {
         newNameTextBox.setFocus(true);
       }
     }
 
-    private boolean validate(String newFormName) {
+    private boolean validate(String newTaskName) {
       // Check that it meets the formatting requirements.
-      if (!TextValidators.isValidIdentifier(newFormName)) {
-        Window.alert(MESSAGES.malformedFormNameError());
+      if (!TextValidators.isValidIdentifier(newTaskName)) {
+        Window.alert(MESSAGES.malformedTaskNameError());
         return false;
       }
 
       // Check that it's unique.
-      if (otherContextNames.contains(newFormName)) {
-        Window.alert(MESSAGES.duplicateFormNameError());
+      if (otherContextNames.contains(newTaskName)) {
+        Window.alert(MESSAGES.duplicateTaskNameError());
         return false;
       }
 
@@ -198,55 +194,52 @@ public final class AddFormCommand extends ChainableCommand {
     }
 
     /**
-     * Adds a new form to the project.
+     * Adds a new task to the project.
      *
-     * @param formName the new form name
+     * @param taskName the new task name
      */
-    protected void addFormAction(final YoungAndroidProjectNode projectRootNode, 
-        final String formName) {
+    protected void addTaskAction(final YoungAndroidProjectNode projectRootNode,
+                                 final String taskName) {
       final Ode ode = Ode.getInstance();
       final YoungAndroidPackageNode packageNode = projectRootNode.getPackageNode();
-      String qualifiedFormName = packageNode.getPackageName() + '.' + formName;
-      final String formFileId = YoungAndroidFormNode.getFormFileId(qualifiedFormName);
-      final String blocksFileId = YoungAndroidBlocksNode.getBlocklyFileId(qualifiedFormName);
+      String qualifiedTaskName = packageNode.getPackageName() + '.' + taskName;
+      final String taskFileId = YoungAndroidTaskNode.getTaskFileId(qualifiedTaskName);
+      final String blocksFileId = YoungAndroidBlocksNode.getBlocklyFileId(qualifiedTaskName);
 
       OdeAsyncCallback<Long> callback = new OdeAsyncCallback<Long>(
           // failure message
-          MESSAGES.addFormError()) {
+          MESSAGES.addTaskError()) {
         @Override
         public void onSuccess(Long modDate) {
           final Ode ode = Ode.getInstance();
           ode.updateModificationDate(projectRootNode.getProjectId(), modDate);
+          ode.setTaskExists(true);
 
-          // Add the new form and blocks nodes to the project
+          // Add the new task and blocks nodes to the project
           final Project project = ode.getProjectManager().getProject(projectRootNode);
-          project.addNode(packageNode, new YoungAndroidFormNode(formFileId));
+          project.addNode(packageNode, new YoungAndroidTaskNode(taskFileId));
           project.addNode(packageNode, new YoungAndroidBlocksNode(blocksFileId));
 
-          // Add the screen to the DesignToolbar and select the new form editor. 
-          // We need to do this once the form editor and blocks editor have been
+          // Add the task to the DesignToolbar and select the new task editor.
+          // We need to do this once the task editor and blocks editor have been
           // added to the project editor (after the files are completely loaded).
-          //
-          // TODO(sharon): if we create YaProjectEditor.addScreen() and merge
-          // that with the current work done in YaProjectEditor.addFormEditor,
-          // consider moving this deferred work to the explicit command for
-          // after the form file is loaded.
           Scheduler.get().scheduleDeferred(new Scheduler.ScheduledCommand() {
             @Override
             public void execute() {
-              ProjectEditor projectEditor = 
+              OdeLog.wlog("Adding to toolbar " + taskFileId);
+              ProjectEditor projectEditor =
                   ode.getEditorManager().getOpenProjectEditor(project.getProjectId());
-              FileEditor formEditor = projectEditor.getFileEditor(formFileId);
+              FileEditor taskEditor = projectEditor.getFileEditor(taskFileId);
               FileEditor blocksEditor = projectEditor.getFileEditor(blocksFileId);
-              if (formEditor != null && blocksEditor != null && !ode.screensLocked()) {
+              if (taskEditor != null && blocksEditor != null && !ode.screensLocked()) {
                 DesignToolbar designToolbar = Ode.getInstance().getDesignToolbar();
-                long projectId = formEditor.getProjectId();
-                designToolbar.addScreen(projectId, formName, formEditor, 
+                long projectId = taskEditor.getProjectId();
+                designToolbar.addTask(projectId, taskName, taskEditor,
                     blocksEditor);
-                designToolbar.switchToScreen(projectId, formName, DesignToolbar.View.CONTEXT);
+                designToolbar.switchToScreen(projectId, taskName, DesignToolbar.View.CONTEXT);
                 executeNextCommand(projectRootNode);
               } else {
-                // The form editor and/or blocks editor is still not there. Try again later.
+                // The task editor and/or blocks editor is still not there. Try again later.
                 Scheduler.get().scheduleDeferred(this);
               }
             }
@@ -261,9 +254,9 @@ public final class AddFormCommand extends ChainableCommand {
         }
       };
 
-      // Create the new form on the backend. The backend will create the form (.scm) and blocks
+      // Create the new task on the backend. The backend will create the task (.tsk) and blocks
       // (.blk) files.
-      ode.getProjectService().addFile(projectRootNode.getProjectId(), formFileId, callback);
+      ode.getProjectService().addFile(projectRootNode.getProjectId(), taskFileId, callback);
     }
 
     @Override

@@ -554,7 +554,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   // [lyn, 2014/10/28] Handle these cases
   public String getFormJson() {
     if (blocksInited(formName)) {
-      return myBlocksEditor.encodeFormAsJsonString(true);
+      return myBlocksEditor.encodeContextAsJsonString(true);
     } else {
       // in case someone clicks Save before the blocks area is inited
       String formJson = pendingFormJsonMap.get(formName);
@@ -575,7 +575,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
       throw new YailGenerationException("Blocks area is not initialized yet", formName);
     }
     try {
-      return doGetYail(formName, formJson, packageName);
+      return doGetYail(formName, formJson, packageName); //send whether form or task
     } catch (JavaScriptException e) {
       throw new YailGenerationException(e.getDescription(), formName);
     }
@@ -588,7 +588,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * @throws YailGenerationException if there was a problem generating the Yail
    */
   public void sendComponentData(String formJson, String packageName) throws YailGenerationException {
-    if (!currentForm.equals(formName)) { // Not working on the current form...
+    if (myBlocksEditor.isFormBlocksEditor() && !currentForm.equals(formName)) { // Not working on the current form...
       OdeLog.log("Not working on " + currentForm + " (while sending for " + formName + ")");
       return;
     }
@@ -609,6 +609,11 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
       doResetYail(formName);
     formName = newFormName;
     blocklyWorkspaceChanged(formName);
+  }
+
+  public void showTask(String taskName) {
+    doResetYail(taskName);
+    blocklyWorkspaceChanged(taskName);
   }
 
   public void startRepl(boolean alreadyRunning, boolean forEmulator, boolean forUsb) { // Start the Repl

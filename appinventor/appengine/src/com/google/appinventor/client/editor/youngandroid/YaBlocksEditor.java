@@ -12,9 +12,10 @@ import com.google.appinventor.client.boxes.BlockSelectorBox;
 import com.google.appinventor.client.boxes.PaletteBox;
 import com.google.appinventor.client.editor.FileEditor;
 import com.google.appinventor.client.editor.simple.SimpleComponentDatabase;
+import com.google.appinventor.client.editor.simple.SimpleEditor;
 import com.google.appinventor.client.editor.simple.components.FormChangeListener;
 import com.google.appinventor.client.editor.simple.components.MockComponent;
-import com.google.appinventor.client.editor.simple.components.MockForm;
+import com.google.appinventor.client.editor.simple.components.MockContext;
 import com.google.appinventor.client.editor.simple.palette.DropTargetProvider;
 import com.google.appinventor.client.editor.youngandroid.palette.YoungAndroidPalettePanel;
 import com.google.appinventor.client.explorer.SourceStructureExplorer;
@@ -22,7 +23,6 @@ import com.google.appinventor.client.explorer.SourceStructureExplorerItem;
 import com.google.appinventor.client.explorer.project.ComponentDatabaseChangeListener;
 import com.google.appinventor.client.output.OdeLog;
 import com.google.appinventor.client.widgets.dnd.DropTarget;
-import com.google.appinventor.components.common.YaVersion;
 import com.google.appinventor.shared.rpc.project.ChecksumedFileException;
 import com.google.appinventor.shared.rpc.project.ChecksumedLoadFile;
 import com.google.appinventor.shared.rpc.project.FileDescriptorWithContent;
@@ -63,13 +63,13 @@ public final class YaBlocksEditor extends FileEditor
   // Database of component type descriptions
   private final SimpleComponentDatabase COMPONENT_DATABASE;
 
-  // Keep a map from projectid_formname -> YaBlocksEditor for handling blocks workspace changed
+  // Keep a map from projectid_contextname -> YaBlocksEditor for handling blocks workspace changed
   // callbacks from the BlocklyPanel objects. This has to be static because it is used by
   // static methods that are called from the Javascript Blockly world.
-  private static final Map<String, YaBlocksEditor> formToBlocksEditor = Maps.newHashMap();
+  private static final Map<String, YaBlocksEditor> contextToBlocksEditor = Maps.newHashMap();
 
-  // projectid_formname for this blocks editor. Our index into the static formToBlocksEditor map.
-  private String fullFormName;
+  // projectid_contextname for this blocks editor. Our index into the static formToBlocksEditor map.
+  private String fullContextName;
 
   private final YoungAndroidBlocksNode blocksNode;
 
@@ -100,8 +100,8 @@ public final class YaBlocksEditor extends FileEditor
   // blocks area again.
   private Set<String> componentUuids = new HashSet<String>();
 
-  // The form editor associated with this blocks editor
-  private YaFormEditor myFormEditor;
+  // The context editor associated with this blocks editor
+  private YaContextEditor myContextEditor;
 
   // Used to determine if the newly generated yail should be sent to the debugging phone
   private String lastYail = "";
@@ -117,9 +117,9 @@ public final class YaBlocksEditor extends FileEditor
     this.blocksNode = blocksNode;
     COMPONENT_DATABASE = SimpleComponentDatabase.getInstance(getProjectId());
 
-    fullFormName = blocksNode.getProjectId() + "_" + blocksNode.getFormName();
-    formToBlocksEditor.put(fullFormName, this);
-    blocksArea = new BlocklyPanel(this, fullFormName); // [lyn, 2014/10/28] pass in editor so can extract form json from it
+    fullContextName = blocksNode.getProjectId() + "_" + blocksNode.getContextName();
+    contextToBlocksEditor.put(fullContextName, this);
+    blocksArea = new BlocklyPanel(this, fullContextName); // [lyn, 2014/10/28] pass in editor so can extract form json from it
     blocksArea.setWidth("100%");
     // This code seems to be using a rather old layout, so we cannot simply pass 100% for height.
     // Instead, it needs to be calculated from the client's window, and a listener added to Window
@@ -143,9 +143,9 @@ public final class YaBlocksEditor extends FileEditor
     BlockSelectorBox.getBlockSelectorBox().addBlockDrawerSelectionListener(this);
 
     // Create palettePanel, which will be used as the content of the PaletteBox.
-    myFormEditor = projectEditor.getFormFileEditor(blocksNode.getFormName());
-    if (myFormEditor != null) {
-      palettePanel = new YoungAndroidPalettePanel(myFormEditor);
+    myContextEditor = projectEditor.getContextFileEditor(blocksNode.getContextName());
+    if (myContextEditor != null) {
+      palettePanel = new YoungAndroidPalettePanel(myContextEditor);
       palettePanel.loadComponents(new DropTargetProvider() {
         // TODO(sharon): make the tree in the BlockSelectorBox a drop target
         @Override
@@ -176,8 +176,8 @@ public final class YaBlocksEditor extends FileEditor
           this.onFailure(e);
           return;
         }
-        String formJson = myFormEditor.preUpgradeJsonString(); // [lyn, 2014/10/27] added formJson for upgrading
-        blocksArea.loadBlocksContent(formJson, blkFileContent);
+        String contextJson = myContextEditor.preUpgradeJsonString(); // [lyn, 2014/10/27] added formJson for upgrading
+        blocksArea.loadBlocksContent(contextJson, blkFileContent);
         loadComplete = true;
         selectedDrawer = null;
         if (afterFileLoaded != null) {
@@ -197,7 +197,7 @@ public final class YaBlocksEditor extends FileEditor
 
   @Override
   public String getTabText() {
-    return MESSAGES.blocksEditorTabName(blocksNode.getFormName());
+    return MESSAGES.blocksEditorTabName(blocksNode.getContextName());
   }
 
   @Override
@@ -207,10 +207,22 @@ public final class YaBlocksEditor extends FileEditor
     showWhenInitialized();
   }
 
+  public boolean isFormBlocksEditor() {
+    return myContextEditor.isFormEditor();
+  }
+
+  public boolean isTaskBlocksEditor() {
+    return myContextEditor.isTaskEditor();
+  }
+
   public void showWhenInitialized() {
     //check if blocks are initialized
-    if(BlocklyPanel.blocksInited(fullFormName)) {
-      blocksArea.showDifferentForm(fullFormName);
+    if(BlocklyPanel.blocksInited(fullContextName)) {
+      if (isFormBlocksEditor()) {
+        blocksArea.showDifferentForm(fullContextName);
+      } else if (isTaskBlocksEditor()) {
+        blocksArea.showTask(fullContextName);
+      }
       loadBlocksEditor();
       sendComponentData();  // Send Blockly the component information for generating Yail
       blocksArea.renderBlockly(); //Re-render Blockly due to firefox bug
@@ -241,12 +253,12 @@ public final class YaBlocksEditor extends FileEditor
     PaletteBox.getPaletteBox().setVisible(false);
 
     // Update the source structure explorer with the tree of this form's components.
-    MockForm form = getForm();
-    if (form != null) {
+    MockContext context = getContext();
+    if (context != null) {
       // start with no component selected in sourceStructureExplorer. We
       // don't want a component drawer open in the blocks editor when we
       // come back to it.
-      updateBlocksTree(form, null);
+      updateBlocksTree(context, null);
 
       Ode.getInstance().getWorkColumns().remove(Ode.getInstance().getStructureAndAssets()
           .getWidget(2));
@@ -279,14 +291,14 @@ public final class YaBlocksEditor extends FileEditor
   @Override
   public void onClose() {
     // our partner YaFormEditor added us as a FormChangeListener, but we remove ourself.
-    getForm().removeFormChangeListener(this);
+    getContext().removeFormChangeListener(this);
     BlockSelectorBox.getBlockSelectorBox().removeBlockDrawerSelectionListener(this);
-    formToBlocksEditor.remove(fullFormName);
+    contextToBlocksEditor.remove(fullContextName);
   }
 
   public static void toggleWarning() {
     BlocklyPanel.switchWarningVisibility();
-    for(Object formName : formToBlocksEditor.keySet().toArray()){
+    for(Object formName : contextToBlocksEditor.keySet().toArray()){
       BlocklyPanel.toggleWarning((String) formName);
     }
   }
@@ -311,7 +323,7 @@ public final class YaBlocksEditor extends FileEditor
   }
 
   public static void onBlocksAreaChanged(String formName) {
-    YaBlocksEditor editor = formToBlocksEditor.get(formName);
+    YaBlocksEditor editor = contextToBlocksEditor.get(formName);
     if (editor != null) {
       OdeLog.log("Got blocks area changed for " + formName);
       Ode.getInstance().getEditorManager().scheduleAutoSave(editor);
@@ -322,18 +334,18 @@ public final class YaBlocksEditor extends FileEditor
 
   public synchronized void sendComponentData() {
     try {
-      blocksArea.sendComponentData(myFormEditor.encodeFormAsJsonString(true),
+      blocksArea.sendComponentData(myContextEditor.encodeContextAsJsonString(true),
         packageNameFromPath(getFileId()));
     } catch (YailGenerationException e) {
       e.printStackTrace();
     }
   }
 
-  private void updateBlocksTree(MockForm form, SourceStructureExplorerItem itemToSelect) {
+  private void updateBlocksTree(MockContext context, SourceStructureExplorerItem itemToSelect) {
     TreeItem items[] = new TreeItem[3];
     items[0] = BlockSelectorBox.getBlockSelectorBox().getBuiltInBlocksTree();
-    items[1] = form.buildComponentsTree();
-    items[2] = BlockSelectorBox.getBlockSelectorBox().getGenericComponentsTree(form);
+    items[1] = context.buildComponentsTree();
+    items[2] = BlockSelectorBox.getBlockSelectorBox().getGenericComponentsTree(context);
     sourceStructureExplorer.updateTree(items, itemToSelect);
   }
 
@@ -352,7 +364,7 @@ public final class YaBlocksEditor extends FileEditor
 
   public FileDescriptorWithContent getYail() throws YailGenerationException {
     return new FileDescriptorWithContent(getProjectId(), yailFileName(),
-        blocksArea.getYail(myFormEditor.encodeFormAsJsonString(true),
+        blocksArea.getYail(myContextEditor.encodeContextAsJsonString(true),
             packageNameFromPath(getFileId())));
   }
 
@@ -385,11 +397,11 @@ public final class YaBlocksEditor extends FileEditor
     return SimpleComponentDatabase.getInstance().getComponentsJSONString();
   }
 
-  public static String getComponentInstanceTypeName(String formName, String instanceName) {
+  public static String getComponentInstanceTypeName(String contextName, String instanceName) {
       //use form name to get blocks editor
-      YaBlocksEditor blocksEditor = formToBlocksEditor.get(formName);
+      YaBlocksEditor blocksEditor = contextToBlocksEditor.get(contextName);
       //get type name from form editor
-      return blocksEditor.myFormEditor.getComponentInstanceTypeName(instanceName);
+      return blocksEditor.myContextEditor.getComponentInstanceTypeName(instanceName);
   }
 
   public void addComponent(String typeName, String instanceName, String uuid) {
@@ -456,11 +468,11 @@ public final class YaBlocksEditor extends FileEditor
     blocksArea.hideBuiltinBlocks();
   }
 
-  public MockForm getForm() {
+  public MockContext getContext() {
     YaProjectEditor yaProjectEditor = (YaProjectEditor) projectEditor;
-    YaFormEditor myFormEditor = yaProjectEditor.getFormFileEditor(blocksNode.getFormName());
-    if (myFormEditor != null) {
-      return myFormEditor.getForm();
+    YaContextEditor myContextEditor = yaProjectEditor.getContextFileEditor(blocksNode.getContextName());
+    if (myContextEditor != null) {
+      return myContextEditor.getContext();
     } else {
       return null;
     }
@@ -533,9 +545,9 @@ public final class YaBlocksEditor extends FileEditor
   }
 
   private void updateSourceStructureExplorer() {
-    MockForm form = getForm();
-    if (form != null) {
-      updateBlocksTree(form, form.getSelectedComponent().getSourceStructureExplorerItem());
+    MockContext context = getContext();
+    if (context != null) {
+      updateBlocksTree(context, context.getSelectedComponent().getSourceStructureExplorerItem());
     }
   }
 
@@ -595,7 +607,7 @@ public final class YaBlocksEditor extends FileEditor
   // method to ignore this blocks file and not save it out.
 
   public static void setBlocksDamaged(String formName) {
-    YaBlocksEditor editor = formToBlocksEditor.get(formName);
+    YaBlocksEditor editor = contextToBlocksEditor.get(formName);
     if (editor != null) {
       editor.setDamaged(true);
     }
@@ -622,8 +634,8 @@ public final class YaBlocksEditor extends FileEditor
    * Encodes the associated form's properties as a JSON encoded string. Used by YaBlocksEditor as well,
    * to send the form info to the blockly world during code generation.
    */
-  protected String encodeFormAsJsonString(boolean forYail) {
-    return myFormEditor.encodeFormAsJsonString(forYail);
+  protected String encodeContextAsJsonString(boolean forYail) {
+    return myContextEditor.encodeContextAsJsonString(forYail);
   }
 
   private void addComponentDatabaseChangeListener(ComponentDatabaseChangeListener cdbChangeListener) {

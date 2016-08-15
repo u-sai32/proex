@@ -1,12 +1,9 @@
 // -*- mode: java; c-basic-offset: 2; -*-
-// Copyright 2009-2011 Google, All Rights reserved
-// Copyright 2011-2012 MIT, All rights reserved
+// Copyright 2016 MIT, All rights reserved
 // Released under the Apache License, Version 2.0
 // http://www.apache.org/licenses/LICENSE-2.0
 
 package com.google.appinventor.client.editor.youngandroid;
-
-import static com.google.appinventor.client.Ode.MESSAGES;
 
 import com.google.appinventor.client.Ode;
 import com.google.appinventor.client.OdeAsyncCallback;
@@ -23,7 +20,7 @@ import com.google.appinventor.client.editor.simple.components.FormChangeListener
 import com.google.appinventor.client.editor.simple.components.MockComponent;
 import com.google.appinventor.client.editor.simple.components.MockContainer;
 import com.google.appinventor.client.editor.simple.components.MockContext;
-import com.google.appinventor.client.editor.simple.components.MockForm;
+import com.google.appinventor.client.editor.simple.components.MockTask;
 import com.google.appinventor.client.editor.simple.palette.DropTargetProvider;
 import com.google.appinventor.client.editor.simple.palette.SimpleComponentDescriptor;
 import com.google.appinventor.client.editor.simple.palette.SimplePalettePanel;
@@ -32,45 +29,41 @@ import com.google.appinventor.client.explorer.SourceStructureExplorer;
 import com.google.appinventor.client.explorer.project.ComponentDatabaseChangeListener;
 import com.google.appinventor.client.output.OdeLog;
 import com.google.appinventor.client.properties.json.ClientJsonParser;
-import com.google.appinventor.client.properties.json.ClientJsonString;
 import com.google.appinventor.client.widgets.dnd.DropTarget;
 import com.google.appinventor.client.widgets.properties.EditableProperties;
 import com.google.appinventor.client.widgets.properties.PropertiesPanel;
 import com.google.appinventor.client.youngandroid.YoungAndroidFormUpgrader;
 import com.google.appinventor.components.common.YaVersion;
-import com.google.appinventor.shared.properties.json.JSONArray;
 import com.google.appinventor.shared.properties.json.JSONObject;
 import com.google.appinventor.shared.properties.json.JSONParser;
 import com.google.appinventor.shared.properties.json.JSONValue;
 import com.google.appinventor.shared.rpc.project.ChecksumedFileException;
 import com.google.appinventor.shared.rpc.project.ChecksumedLoadFile;
-import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidFormNode;
+import com.google.appinventor.shared.rpc.project.youngandroid.YoungAndroidTaskNode;
 import com.google.appinventor.shared.youngandroid.YoungAndroidSourceAnalyzer;
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Maps;
 import com.google.gwt.user.client.Command;
-import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.DockPanel;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
+import static com.google.appinventor.client.Ode.MESSAGES;
+
 /**
- * Editor for Young Android Form (.scm) files.
+ * Editor for Young Android Task (.tsk) files.
  *
  * <p>This editor shows a designer that provides support for visual design of
- * forms.</p>
- *
- * @author markf@google.com (Mark Friedman)
- * @author lizlooney@google.com (Liz Looney)
+ * tasks.</p>
  */
-public final class YaFormEditor extends YaContextEditor implements FormChangeListener, ComponentDatabaseChangeListener {
+public final class YaTaskEditor extends YaContextEditor implements FormChangeListener, ComponentDatabaseChangeListener {
 
-  private final YoungAndroidFormNode formNode;
+  private final YoungAndroidTaskNode taskNode;
 
   // Flag to indicate when loading the file is completed. This is needed because building the mock
-  // form from the file properties fires events that need to be ignored, otherwise the file will be
+  // task from the file properties fires events that need to be ignored, otherwise the file will be
   // marked as being modified.
   private boolean loadComplete;
 
@@ -82,30 +75,24 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
   private final PropertiesPanel designProperties;
 
   // UI elements
-  private final SimpleVisibleComponentsPanel visibleComponentsPanel;
   private final SimpleNonVisibleComponentsPanel nonVisibleComponentsPanel;
 
-  private MockForm form;  // initialized lazily after the file is loaded from the ODE server
+  private MockTask task;  // initialized lazily after the file is loaded from the ODE server
 
-  // [lyn, 2014/10/13] Need to remember JSON initially loaded from .scm file *before* it is upgraded
-  // by YoungAndroidFormUpgrader within upgradeFile. This JSON contains pre-upgrade component
-  // version info that is needed by Blockly.SaveFile.load to perform upgrades in the Blocks Editor.
-  // This was unnecessary in AI Classic because the .blk file contained component version info
-  // as well as the .scm file. But in AI2, the .bky file contains no component version info,
-  // and we rely on the pre-upgraded .scm file for this info.
   private String preUpgradeJsonString;
+
+  private final List<ComponentDatabaseChangeListener> componentDatabaseChangeListeners = new ArrayList<ComponentDatabaseChangeListener>();
 
 
   /**
-   * Creates a new YaFormEditor.
+   * Creates a new YaTaskEditor.
    *
    * @param projectEditor  the project editor that contains this file editor
-   * @param formNode the YoungAndroidFormNode associated with this YaFormEditor
+   * @param taskNode the YoungAndroidTaskNode associated with this YaTaskEditor
    */
-  YaFormEditor(ProjectEditor projectEditor, YoungAndroidFormNode formNode) {
-    super(projectEditor, formNode, EditorType.FORM);
-
-    this.formNode = formNode;
+  YaTaskEditor(ProjectEditor projectEditor, YoungAndroidTaskNode taskNode) {
+    super(projectEditor, taskNode, EditorType.TASK);
+    this.taskNode = taskNode;
 
     // Get reference to the source structure explorer
     sourceStructureExplorer =
@@ -113,13 +100,10 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
 
     // Create UI elements for the designer panels.
     nonVisibleComponentsPanel = new SimpleNonVisibleComponentsPanel();
-    addComponentDatabaseChangeListener(nonVisibleComponentsPanel);
-    visibleComponentsPanel = new SimpleVisibleComponentsPanel(this, nonVisibleComponentsPanel);
-    addComponentDatabaseChangeListener(visibleComponentsPanel);
+    nonVisibleComponentsPanel.setShowAlways(true);
     DockPanel componentsPanel = new DockPanel();
     componentsPanel.setHorizontalAlignment(DockPanel.ALIGN_CENTER);
-    componentsPanel.add(visibleComponentsPanel, DockPanel.NORTH);
-    componentsPanel.add(nonVisibleComponentsPanel, DockPanel.SOUTH);
+    componentsPanel.add(nonVisibleComponentsPanel, DockPanel.NORTH);
     componentsPanel.setSize("100%", "100%");
 
     // Create palettePanel, which will be used as the content of the PaletteBox.
@@ -130,18 +114,17 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
         // TODO(markf): Figure out a good way to memorize the targets or refactor things so that
         // getDropTargets() doesn't get called for each component.
         // NOTE: These targets must be specified in depth-first order.
-        List<DropTarget> dropTargets = form.getDropTargetsWithin();
-        dropTargets.add(visibleComponentsPanel);
+        List<DropTarget> dropTargets = task.getDropTargetsWithin();
         dropTargets.add(nonVisibleComponentsPanel);
         return dropTargets.toArray(new DropTarget[dropTargets.size()]);
       }
     });
     palettePanel.setSize("100%", "100%");
-    addComponentDatabaseChangeListener(palettePanel);
 
     // Create designProperties, which will be used as the content of the PropertiesBox.
     designProperties = new PropertiesPanel();
     designProperties.setSize("100%", "100%");
+
     initWidget(componentsPanel);
     setSize("100%", "100%");
   }
@@ -186,19 +169,19 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
 
   @Override
   public String getTabText() {
-    return formNode.getContextName();
+    return taskNode.getContextName();
   }
 
   @Override
   public void onShow() {
-    OdeLog.log("YaFormEditor: got onShow() for " + getFileId());
+    OdeLog.log("YaTaskEditor: got onShow() for " + getFileId());
     super.onShow();
     loadDesigner();
   }
 
   @Override
   public void onHide() {
-    OdeLog.log("YaFormEditor: got onHide() for " + getFileId());
+    OdeLog.log("YaTaskEditor: got onHide() for " + getFileId());
     // When an editor is detached, if we are the "current" editor,
     // set the current editor to null and clean up the UI.
     // Note: I'm not sure it is possible that we would not be the "current"
@@ -207,14 +190,14 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
       super.onHide();
       unloadDesigner();
     } else {
-      OdeLog.wlog("YaFormEditor.onHide: Not doing anything since we're not the "
+      OdeLog.wlog("YaTaskEditor.onHide: Not doing anything since we're not the "
           + "current file editor!");
     }
   }
 
   @Override
   public void onClose() {
-    form.removeFormChangeListener(this);
+    task.removeFormChangeListener(this);
     // Note: our partner YaBlocksEditor will remove itself as a FormChangeListener, even
     // though we added it.
   }
@@ -241,7 +224,7 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
   public Map<String, MockComponent> getComponents() {
     Map<String, MockComponent> map = Maps.newHashMap();
     if (loadComplete) {
-      populateComponentsMap(form, map);
+      populateComponentsMap(task, map);
     }
     return map;
   }
@@ -261,20 +244,21 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
     return nonVisibleComponentsPanel;
   }
 
+  @Override
   public SimpleVisibleComponentsPanel getVisibleComponentsPanel() {
-    return visibleComponentsPanel;
+    return null;
   }
 
   @Override
   public boolean isScreen1() {
-    return formNode.isScreen1();
+    return taskNode.isScreen1();
   }
 
   // FormChangeListener implementation
 
   @Override
   public void onComponentPropertyChanged(MockComponent component,
-      String propertyName, String propertyValue) {
+                                         String propertyName, String propertyValue) {
     if (loadComplete) {
       // If the property isn't actually persisted to the .scm file, we don't need to do anything.
       if (component.isPropertyPersisted(propertyName)) {
@@ -310,7 +294,6 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
   public void onComponentRenamed(MockComponent component, String oldName) {
     if (loadComplete) {
       onFormStructureChange();
-      updatePropertiesPanel(component);
     } else {
       OdeLog.elog("onComponentRenamed called when loadComplete is false");
     }
@@ -337,22 +320,22 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
   // other public methods
 
   /**
-   * Returns the context associated with this YaFormEditor.
+   * Returns the context associated with this YaTaskEditor.
    *
    * @return a MockContext
    */
   @Override
   public MockContext getContext() {
-    return form;
+    return task;
   }
 
   /**
-   * Returns the form associated with this YaFormEditor.
+   * Returns the task associated with this YaTaskEditor.
    *
    * @return a MockForm
    */
-  public MockForm getForm() {
-    return form;
+  public MockTask getTask() {
+    return task;
   }
 
   public String getComponentInstanceTypeName(String instanceName) {
@@ -374,13 +357,11 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
    *                              file has upgraded and saved back to the ODE
    *                              server
    */
-  protected final void upgradeFile(FileContentHolder fileContentHolder,
-      final Command afterUpgradeComplete) {
-    super.upgradeFile(fileContentHolder);
-
+  private void upgradeFile(FileContentHolder fileContentHolder,
+                           final Command afterUpgradeComplete) {
     JSONObject propertiesObject = YoungAndroidSourceAnalyzer.parseSourceFile(
         fileContentHolder.getFileContent(), JSON_PARSER);
-    preUpgradeJsonString =  propertiesObject.toJson(); // [lyn, [2014/10/13] remember pre-upgrade component versions.
+    preUpgradeJsonString =  propertiesObject.toJson();
     if (YoungAndroidFormUpgrader.upgradeSourceProperties(propertiesObject.getProperties())) {
       String upgradedContent = YoungAndroidSourceAnalyzer.generateSourceFile(propertiesObject);
       fileContentHolder.setFileContent(upgradedContent);
@@ -408,12 +389,11 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
   private void onFileLoaded(String content) {
     JSONObject propertiesObject = YoungAndroidSourceAnalyzer.parseSourceFile(
         content, JSON_PARSER);
-    form = createMockForm(propertiesObject.getProperties().get("Properties").asObject());
+    task = createMockTask(propertiesObject.getProperties().get("Properties").asObject());
 
     // Initialize the nonVisibleComponentsPanel and visibleComponentsPanel.
-    nonVisibleComponentsPanel.setContext(form);
-    visibleComponentsPanel.setForm(form);
-    form.select();
+    nonVisibleComponentsPanel.setContext(task);
+    task.select();
 
     // Set loadCompleted to true.
     // From now on, all change events will be taken seriously.
@@ -421,10 +401,10 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
   }
 
   /*
-   * Parses the JSON properties and creates the form and its component structure.
+   * Parses the JSON properties and creates the task and its component structure.
    */
-  private MockForm createMockForm(JSONObject propertiesObject) {
-    return (MockForm) createMockComponent(propertiesObject, null);
+  private MockTask createMockTask(JSONObject propertiesObject) {
+    return (MockTask) createMockComponent(propertiesObject, null);
   }
 
   /*
@@ -439,11 +419,11 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
 
     // Instantiate a mock component for the visual designer
     MockComponent mockComponent;
-    if (componentType.equals(MockForm.TYPE)) {
+    if (componentType.equals(MockTask.TYPE)) {
       Preconditions.checkArgument(parent == null);
 
       // Instantiate new root component
-      mockComponent = new MockForm(this);
+      mockComponent = new MockTask(this);
     } else {
       mockComponent = SimpleComponentDescriptor.createMockComponent(componentType, this);
 
@@ -454,7 +434,6 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
         nonVisibleComponentsPanel.addComponent(mockComponent);
       }
     }
-
     // Set the name of the component (on instantiation components are assigned a generated name)
     String componentName = properties.get("$Name").asString().getString();
     mockComponent.changeProperty("Name", componentName);
@@ -466,20 +445,9 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
       }
     }
 
-
-
-    //This is for old project which doesn't have the AppName property
-    if (mockComponent instanceof MockForm) {
-      if (!properties.keySet().contains("AppName")) {
-        String fileId = getFileId();
-        String projectName = fileId.split("/")[3];
-        mockComponent.changeProperty("AppName", projectName);
-      }
-    }
-
-    // Add component type to the blocks editor
+    // Add component type to the blocks editorA
     YaProjectEditor yaProjectEditor = (YaProjectEditor) projectEditor;
-    YaBlocksEditor blockEditor = yaProjectEditor.getBlocksFileEditor(formNode.getContextName());
+    YaBlocksEditor blockEditor = yaProjectEditor.getBlocksFileEditor(taskNode.getContextName());
     blockEditor.addComponent(mockComponent.getType(), mockComponent.getName(),
         mockComponent.getUuid());
 
@@ -489,24 +457,23 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
         createMockComponent(nestedComponent.asObject(), (MockContainer) mockComponent);
       }
     }
-
     return mockComponent;
   }
 
   /*
-   * Updates the the whole designer: form, palette, source structure explorer,
+   * Updates the the whole designer: task, palette, source structure explorer,
    * assets list, and properties panel.
    */
   private void loadDesigner() {
-    form.refresh();
-    MockComponent selectedComponent = form.getSelectedComponent();
+    task.refresh();
+    MockComponent selectedComponent = task.getSelectedComponent();
 
     // Set the palette box's content.
     PaletteBox paletteBox = PaletteBox.getPaletteBox();
     paletteBox.setContent(palettePanel);
 
-    // Update the source structure explorer with the tree of this form's components.
-    sourceStructureExplorer.updateTree(form.buildComponentsTree(),
+    // Update the source structure explorer with the tree of this tasks's components.
+    sourceStructureExplorer.updateTree(task.buildComponentsTree(),
         selectedComponent.getSourceStructureExplorerItem());
     SourceStructureBox.getSourceStructureBox().setVisible(true);
 
@@ -520,13 +487,12 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
     updatePropertiesPanel(selectedComponent);
     propertiesBox.setVisible(true);
 
-    // Listen to changes on the form.
-    form.addFormChangeListener(this);
+    // Listen to changes on the task.
+    task.addFormChangeListener(this);
     // Also have the blocks editor listen to changes. Do this here instead
     // of in the blocks editor so that we don't risk it missing any updates.
-    OdeLog.log("Adding blocks editor as a listener for " + form.getName());
-    form.addFormChangeListener(((YaProjectEditor) projectEditor)
-        .getBlocksFileEditor(form.getName()));
+    task.addFormChangeListener(((YaProjectEditor) projectEditor)
+        .getBlocksFileEditor(task.getName()));
   }
 
   /*
@@ -543,8 +509,8 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
     Ode.getInstance().getEditorManager().scheduleAutoSave(this);
 
     // Update source structure panel
-    sourceStructureExplorer.updateTree(form.buildComponentsTree(),
-        form.getSelectedComponent().getSourceStructureExplorerItem());
+    sourceStructureExplorer.updateTree(task.buildComponentsTree(),
+        task.getSelectedComponent().getSourceStructureExplorerItem());
     updatePhone();          // Push changes to the phone if it is connected
   }
 
@@ -558,26 +524,20 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
   }
 
   /*
-   * Encodes the form's properties as a JSON encoded string. Used by YaBlocksEditor as well,
-   * to send the form info to the blockly world during code generation.
+   * Encodes the task's properties as a JSON encoded string. Used by YaBlocksEditor as well,
+   * to send the task info to the blockly world during code generation.
    */
   public String encodeContextAsJsonString(boolean forYail) {
     StringBuilder sb = new StringBuilder();
     sb.append("{");
-    // Include authURL in output if it is non-null
-    if (authURL != null) {
-      sb.append("\"authURL\":").append(authURL.toJson()).append(",");
-    }
     sb.append("\"YaVersion\":\"").append(YaVersion.YOUNG_ANDROID_VERSION).append("\",");
-    sb.append("\"Source\":\"Form\",");
+    sb.append("\"Source\":\"Task\",");
     sb.append("\"Properties\":");
-    encodeComponentProperties(form, sb, forYail);
+    encodeComponentProperties(task, sb, forYail);
     sb.append("}");
     return sb.toString();
   }
 
-  // [lyn, 2014/10/13] returns the *pre-upgraded* JSON for this form.
-  // needed to allow associated blocks editor to get this info.
   public String preUpgradeJsonString() {
     return preUpgradeJsonString;
   }
@@ -626,8 +586,8 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
    * Clears the palette, source structure explorer, and properties panel.
    */
   private void unloadDesigner() {
-    // The form can still potentially change if the blocks editor is displayed
-    // so don't remove the formChangeListener.
+    // The task can still potentially change if the blocks editor is displayed
+    // so don't remove the taskChangeListener.
 
     // Clear the palette box.
     PaletteBox paletteBox = PaletteBox.getPaletteBox();
@@ -666,20 +626,8 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
    */
   private void updatePhone() {
     YaProjectEditor yaProjectEditor = (YaProjectEditor) projectEditor;
-    YaBlocksEditor blockEditor = yaProjectEditor.getBlocksFileEditor(formNode.getContextName());
-    blockEditor.onBlocksAreaChanged(getProjectId() + "_" + formNode.getContextName());
-  }
-
-  private void addComponentDatabaseChangeListener(ComponentDatabaseChangeListener cdbChangeListener) {
-    componentDatabaseChangeListeners.add(cdbChangeListener);
-  }
-
-  private void removeComponentDatabaseChangeListener(ComponentDatabaseChangeListener cdbChangeListener) {
-    componentDatabaseChangeListeners.remove(cdbChangeListener);
-  }
-
-  private void clearComponentDatabaseChangeListener() {
-    componentDatabaseChangeListeners.clear();
+    YaBlocksEditor blockEditor = yaProjectEditor.getBlocksFileEditor(taskNode.getContextName());
+    blockEditor.onBlocksAreaChanged(getProjectId() + "_" + taskNode.getContextName());
   }
 
   @Override
@@ -691,7 +639,7 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
     //Update Mock Components
     updateMockComponents(componentTypes);
     //Update the Properties Panel
-    updatePropertiesPanel(form.getSelectedComponent());
+    updatePropertiesPanel(task.getSelectedComponent());
   }
 
   @Override
@@ -700,7 +648,7 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
     for (ComponentDatabaseChangeListener cdbChangeListener : componentDatabaseChangeListeners) {
       result = result & cdbChangeListener.beforeComponentTypeRemoved(componentTypes);
     }
-    List<MockComponent> mockComponents = new ArrayList<MockComponent>(getForm().getChildren());
+    List<MockComponent> mockComponents = new ArrayList<MockComponent>(getTask().getChildren());
     for (String compType : componentTypes) {
       for (MockComponent mockComp : mockComponents) {
         if (mockComp.getType().equals(compType)) {
@@ -726,4 +674,5 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
       cdbChangeListener.onResetDatabase();
     }
   }
+
 }

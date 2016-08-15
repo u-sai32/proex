@@ -183,7 +183,7 @@ public class Ode implements EntryPoint {
   // Collection of editors
   private EditorManager editorManager;
 
-  // Currently active file editor, could be a YaFormEditor or a YaBlocksEditor or null.
+  // Currently active file editor, could be a YaFormEditor or YaTaskEditor or a YaBlocksEditor or null.
   private FileEditor currentFileEditor;
 
   private AssetManager assetManager;
@@ -264,6 +264,8 @@ public class Ode implements EntryPoint {
   private boolean windowClosing;
 
   private boolean screensLocked;
+
+  private boolean taskExists;
 
   private SplashConfig splashConfig; // Splash Screen Configuration
 
@@ -2136,6 +2138,14 @@ public class Ode implements EntryPoint {
       OdeLog.log("Unlocking Screens");
     }
     screensLocked = value;
+  }
+
+  public boolean taskExists() {
+    return taskExists;
+  }
+
+  public void setTaskExists(boolean value) {
+    taskExists = value;
   }
 
   // Native code to set the top level rendezvousServer variable

@@ -110,6 +110,18 @@ public interface OdeMessages extends Messages {
   @Description("Label of the button for removing a screen")
   String removeFormButton();
 
+  @DefaultMessage("Add Task ...")
+  @Description("Label of the button for adding a new task")
+  String addTaskButton();
+
+  @DefaultMessage("Remove Task")
+  @Description("Label of the button for removing a task")
+  String removeTaskButton();
+
+  @DefaultMessage("Remove")
+  @Description("Label of the button for removing a screen or task")
+  String removeButton();
+
   @DefaultMessage("Connect")
   @Description("Label of the button for selecting phone connection")
   String connectButton();
@@ -119,6 +131,12 @@ public interface OdeMessages extends Messages {
       "There is no undo.\nAre you sure you want to delete {0}?")
   @Description("Confirmation query for removing a screen")
   String reallyDeleteForm(String formName);
+
+  @DefaultMessage("Deleting this task will completely remove the task from your project. " +
+      "All components and blocks associated with this task will be deleted.\n" +
+      "There is no undo.\nAre you sure you want to delete {0}?")
+  @Description("Confirmation query for removing a task")
+  String reallyDeleteTask(String taskName);
 
   @DefaultMessage("Open the Blocks Editor")
   @Description("Label of the button for opening the blocks editor")
@@ -1315,9 +1333,17 @@ public interface OdeMessages extends Messages {
   @Description("Title of new Screen dialog.")
   String newFormTitle();
 
+  @DefaultMessage("New Task")
+  @Description("Title of new Task dialog.")
+  String newTaskTitle();
+
   @DefaultMessage("Screen name:")
   @Description("Label in front of name in new screen dialog.")
   String formNameLabel();
+
+  @DefaultMessage("Task name:")
+  @Description("Label in front of name in new task dialog.")
+  String taskNameLabel();
 
   @DefaultMessage("WARNING: The number of screens in this app might exceed the limits of App Inventor. " +
                   "Click <a target=\"_blank\" href=\"/reference/other/manyscreens.html\">here</a> for advice about " +
@@ -1335,9 +1361,22 @@ public interface OdeMessages extends Messages {
   @Description("Error shown when a new form name would be the same as an existing one")
   String duplicateFormNameError();
 
+  @DefaultMessage("Task names can contain only letters, numbers, and underscores and must " +
+      "start with a letter")
+  @Description("Error message when task name contains non-alphanumeric characters besides _")
+  String malformedTaskNameError();
+
+  @DefaultMessage("Duplicate Task name!")
+  @Description("Error shown when a new task name would be the same as an existing one")
+  String duplicateTaskNameError();
+
   @DefaultMessage("Server error: could not add form. Please try again later!")
   @Description("Error message reported when adding a form failed on the server.")
   String addFormError();
+
+  @DefaultMessage("Server error: could not add task. Please try again later!")
+  @Description("Error message reported when adding a task failed on the server.")
+  String addTaskError();
 
   // Used in explorer/commands/BuildCommand.java, and
   // explorer/commands/WaitForBuildResultCommand.java
@@ -4566,6 +4605,10 @@ public interface OdeMessages extends Messages {
   @Description("")
   String SensorValueChangedEvents();
 
+  @DefaultMessage("TaskStarted")
+  @Description("")
+  String TaskStartedEvents();
+
   //Methods
   @DefaultMessage("ResolveActivity")
   @Description("")
@@ -5680,7 +5723,7 @@ public interface OdeMessages extends Messages {
   @Description("")
   String FileHelpStringComponentPallette();
 
-  @DefaultMessage("Top-level component containing all other components in the program")
+  @DefaultMessage("Top-level component containing all other components in a screen")
   @Description("")
   String FormHelpStringComponentPallette();
 
@@ -5831,6 +5874,10 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("<p>A formatting element in which to place components that should be displayed in tabular form.</p>")
   @Description("")
   String TableArrangementHelpStringComponentPallette();
+
+  @DefaultMessage("Top-level component containing all other components in a task")
+  @Description("")
+  String TaskHelpStringComponentPallette();
 
   @DefaultMessage("<p>A box for the user to enter text.  The initial or user-entered text value is in the <code>Text</code> property.  If blank, the <code>Hint</code> property, which appears as faint text in the box, can provide the user with guidance as to what to type.</p><p>The <code>MultiLine</code> property determines if the text can havemore than one line.  For a single line text box, the keyboard will closeautomatically when the user presses the Done key.  To close the keyboard for multiline text boxes, the app should use  the HideKeyboard method or  rely on the user to press the Back key.</p><p>The <code> NumbersOnly</code> property restricts the keyboard to acceptnumeric input only.</p><p>Other properties affect the appearance of the text box (<code>TextAlignment</code>, <code>BackgroundColor</code>, etc.) and whether it can be used (<code>Enabled</code>).</p><p>Text boxes are usually used with the <code>Button</code> component, with the user clicking on the button when text entry is complete.</p><p>If the text entered by the user should not be displayed, use <code>PasswordTextBox</code> instead.</p>")
   @Description("")

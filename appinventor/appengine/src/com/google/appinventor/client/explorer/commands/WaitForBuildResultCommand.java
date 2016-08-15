@@ -140,7 +140,7 @@ public class WaitForBuildResultCommand extends ChainableCommand {
     for (ProjectNode source : projectRootNode.getAllSourceNodes()) {
       if (source instanceof YoungAndroidBlocksNode) {
         YoungAndroidBlocksNode blocksNode = (YoungAndroidBlocksNode) source;
-        if (formName.equals(blocksNode.getFormName())) {
+        if (formName.equals(blocksNode.getContextName())) {
           return blocksNode;
         }
       }

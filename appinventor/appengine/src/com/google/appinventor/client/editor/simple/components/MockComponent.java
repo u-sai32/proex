@@ -162,7 +162,7 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
         hide();
         String oldName = getName();
         changeProperty(PROPERTY_NAME_NAME, newName);
-        getForm().fireComponentRenamed(MockComponent.this, oldName);
+        getContext().fireComponentRenamed(MockComponent.this, oldName);
       } else {
         newNameTextBox.setFocus(true);
         newNameTextBox.selectAll();
@@ -564,6 +564,15 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
   }
 
   /**
+   * Returns the context containing this component.
+   *
+   * @return  containing context
+   */
+  public MockContext getContext() {
+    return getContainer().getContext();
+  }
+
+  /**
    * Returns the form containing this component.
    *
    * @return  containing form
@@ -572,9 +581,27 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
     return getContainer().getForm();
   }
 
+  /**
+   * Returns the task containing this component.
+   *
+   * @return  containing task
+   */
+  public MockTask getTask() {
+    return getContainer().getTask();
+  }
+
+  public boolean isContext() {
+    return false;
+  }
+
   public boolean isForm() {
     return false;
   }
+
+  public boolean isTask() {
+    return false;
+  }
+
 
   /**
    * Indicates whether a component has a visible representation.
@@ -590,7 +617,7 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
    * Selects this component in the visual editor.
    */
   public final void select() {
-    getForm().setSelectedComponent(this);
+    getContext().setSelectedComponent(this);
   }
 
   /**
@@ -607,14 +634,14 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
     } else {
       removeStyleDependentName("selected");
     }
-    getForm().fireComponentSelectionChange(this, selected);
+    getContext().fireComponentSelectionChange(this, selected);
   }
 
   /**
    * Returns whether this component is selected.
    */
   public boolean isSelected() {
-    return (getForm().getSelectedComponent() == this);
+    return (getContext().getSelectedComponent() == this);
   }
 
   /**
@@ -852,7 +879,7 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
 
   @Override
   public DropTarget[] getDropTargets() {
-    final List<DropTarget> targetsWithinForm = getForm().getDropTargetsWithin();
+    final List<DropTarget> targetsWithinForm = getContext().getDropTargetsWithin();
     return targetsWithinForm.toArray(new DropTarget[targetsWithinForm.size()]);
   }
 
@@ -930,7 +957,7 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
    */
   final void refreshForm() {
     if (isAttached()) {
-      if (getContainer() != null || isForm()) {
+      if ((getContainer() != null && getForm() != null) || isForm()) {
         getForm().refresh();
       }
     }
@@ -951,7 +978,7 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
        * the palette. We need to explicitly trigger on Form here, because forms
        * are not in containers.
        */
-      getForm().fireComponentPropertyChanged(this, propertyName, newValue);
+      getContext().fireComponentPropertyChanged(this, propertyName, newValue);
     }
   }
 
@@ -963,7 +990,7 @@ public abstract class MockComponent extends Composite implements PropertyChangeL
   public void delete() {
     OdeLog.log("Got delete component for " + this.getName());
     this.editor.getProjectEditor().clearLocation(getName());
-    getForm().select();
+    getContext().select();
     // Pass true to indicate that the component is being permanently deleted.
     getContainer().removeComponent(this, true);
     // tell the component its been removed, so it can remove children's blocks
