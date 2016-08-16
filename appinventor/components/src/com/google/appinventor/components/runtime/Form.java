@@ -2061,4 +2061,56 @@ public class Form extends Activity
       dispatchErrorOccurredEvent(this, "HideKeyboard", ErrorMessages.ERROR_NO_FOCUSABLE_VIEW_FOUND);
     }
   }
+
+  @SimpleFunction(description = "Starts the specified task without a start value")
+  public void StartTask(String taskName) {
+    if (activeForm != null) {
+      activeForm.startNewService(taskName, "");
+    } else {
+      throw new IllegalStateException("activeForm is null");
+    }
+  }
+
+  @SimpleFunction(description = "Starts the specified task with a start value")
+  public void StartTaskWithValue(String taskName, Object startValue) {
+    if (activeForm != null) {
+      activeForm.startNewService(taskName, startValue);
+    } else {
+      throw new IllegalStateException("activeForm is null");
+    }
+  }
+
+  private void startNewService(String taskName, Object startValue) {
+    Intent serviceIntent = new Intent();
+    // Note that the following is dependent on task generated class names being the same as
+    // their task names and all tasks being in the same package.
+    String packageName = getPackageName();
+    serviceIntent.setClassName(this, packageName + "." + taskName);
+    String functionName = "open another service";
+    String jValue = "";
+    if (startValue != null) {
+      jValue = jsonEncodeForForm(startValue, functionName);
+    }
+    serviceIntent.putExtra(SERVICE_ARG, jValue);
+    try {
+      startService(serviceIntent);
+    } catch (ActivityNotFoundException e) {
+      dispatchErrorOccurredEvent(this, functionName,
+          ErrorMessages.ERROR_SCREEN_NOT_FOUND, taskName);
+    }
+  }
+
+  @SimpleFunction(description = "Stops the specified task")
+  public void StopTask(String taskName) {
+    Intent serviceIntent = new Intent();
+    // Note that the following is dependent on task generated class names being the same as
+    // their task names and all tasks being in the same package.
+    serviceIntent.setClassName(this, getPackageName() + "." + taskName);
+    try {
+      stopService(serviceIntent);
+    } catch (ActivityNotFoundException e) {
+      dispatchErrorOccurredEvent(this, "StopService",
+          ErrorMessages.ERROR_SCREEN_NOT_FOUND, taskName);
+    }
+  }
 }

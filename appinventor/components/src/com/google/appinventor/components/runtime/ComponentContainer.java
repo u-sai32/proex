@@ -52,12 +52,12 @@ public interface ComponentContainer {
   boolean isTask();
 
   /**
-   * @return  Returns true only if the container is a form or  inside a form.
+   * @return  Returns true only if the container is a form or inside a form.
    */
   boolean inForm();
 
   /**
-   * @return  Returns true only if the container is a task inside a task.
+   * @return  Returns true only if the container is a task or inside a task.
    */
   boolean inTask();
 
