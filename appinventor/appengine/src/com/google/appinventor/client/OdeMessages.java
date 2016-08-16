@@ -5610,6 +5610,18 @@ public interface OdeMessages extends Messages {
   @Description("")
   String StopSoundMethods();
 
+  @DefaultMessage("StartTask")
+  @Description("")
+  String StartTaskMethods();
+
+  @DefaultMessage("StartTaskWithValue")
+  @Description("")
+  String StartTaskWithValueMethods();
+
+  @DefaultMessage("StopTask")
+  @Description("")
+  String StopTaskMethods();
+
   //Mock Components
   @DefaultMessage("add items...")
   @Description("")
