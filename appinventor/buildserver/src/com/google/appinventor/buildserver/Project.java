@@ -7,6 +7,7 @@ package com.google.appinventor.buildserver;
 
 import com.google.common.base.Preconditions;
 import com.google.common.collect.Lists;
+import com.google.common.collect.Maps;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -353,7 +354,7 @@ public final class Project {
       } else if (file.getName().endsWith(YoungAndroidConstants.YAIL_EXTENSION)) {
         String absName = file.getAbsolutePath();
         String name = absName.substring(root.length() + 1, absName.length() -
-            YoungAndroidConstants.TASK_PROPERTIES_EXTENSION.length());
+            YoungAndroidConstants.YAIL_EXTENSION.length());
         yails.put(name.replace(File.separatorChar, '.'), file);
       }
     }
@@ -368,6 +369,9 @@ public final class Project {
     // Lazily discover source files
     if (sources == null) {
       sources = Lists.newArrayList();
+      screens = Lists.newArrayList();
+      tasks = Lists.newArrayList();
+      yails = Maps.newHashMap();
       String sourceTag = properties.getProperty(SOURCETAG);
       for (String sourceDir : sourceTag.split(",")) {
         File dir = new File(projectDir + File.separatorChar + sourceDir);
