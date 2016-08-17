@@ -1144,9 +1144,9 @@
 ;;; form has been created.  Used for setting the inital form properties
 (define-syntax do-after-form-creation
   (syntax-rules ()
-    ((_ expr ...)
+    ((_ context expr ...)
      (if *this-is-the-repl*
-         (begin expr ...)
+         (begin (register-context 'context) expr ...)
          (add-to-form-do-after-creation (delay (begin expr ...)))))))
 
 (define-syntax do-after-task-creation
@@ -1155,6 +1155,14 @@
      (if *this-is-the-repl*
          (begin expr ...)
          (add-to-task-do-after-creation (delay (begin expr ...)))))))
+
+(define (register-context context :: gnu.mapping.Symbol)
+    (set-this-form)
+    (if *this-is-the-repl*
+        (begin (add-to-context-environments context (*:.form-environment *this-form*) )
+               (add-to-context-environment context context *this-form* )
+               (add-to-context-global-var-environments context (*:.global-var-environment *this-form*) )
+               (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks"))))))
 
 ;; The following environments are really just for testing.
 (define *test-environment* (gnu.mapping.Environment:make 'test-env))
@@ -1194,6 +1202,12 @@
           ;; The following is really for testing.  In normal situations *this-form* should be non-null
           (gnu.mapping.Environment:put *test-environment*  new-name old-value))
       (delete-from-current-form-environment old-name))))
+
+(define (rename-in-context-environment context :: gnu.mapping.Symbol old-name :: gnu.mapping.Symbol new-name :: gnu.mapping.Symbol)
+    (when (not (eqv? old-name new-name))
+        (let ((old-value (lookup-in-context-environment context old-name)))
+            (add-to-context-environment context new-name old-value)
+            (remove-from-context-environment context old-name))))
 
 (define (add-global-var-to-current-form-environment name :: gnu.mapping.Symbol object)
   (begin
@@ -2954,15 +2968,15 @@ list, use the make-yail-list constructor with no arguments.
 (define (set-form-name form-name)
   (*:setFormName *this-form* form-name))
 
-(define (remove-component component-name)
+(define (remove-component context component-name)
   (let* ((component-symbol (string->symbol component-name))
-         (component-object (lookup-in-current-form-environment component-symbol)))
-    (delete-from-current-form-environment component-symbol)
+         (component-object (lookup-in-context-environment context component-symbol)))
+    (remove-from-context-environment context component-symbol)
     (when (not (eq? *this-form* #!null))
       (*:deleteComponent *this-form* component-object))))
 
-(define (rename-component old-component-name new-component-name)
-  (rename-in-current-form-environment
+(define (rename-component context old-component-name new-component-name)
+  (rename-in-context-environment context
    (string->symbol old-component-name)
    (string->symbol new-component-name)))
 
@@ -2972,7 +2986,7 @@ list, use the make-yail-list constructor with no arguments.
 
 (define *ui-handler* #!null)
 (define *this-form* #!null)
-(define *active-form* #!null)
+(define *active-task* #!null)
 
 
 ;;; This is called as part of the code that sets up the form in the phone application.

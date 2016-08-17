@@ -51,6 +51,7 @@ Blockly.Yail.YAIL_COMPONENT_TYPE = "component";
 Blockly.Yail.YAIL_DEFINE = "(def ";
 Blockly.Yail.YAIL_DEFINE_EVENT = "(define-event ";
 Blockly.Yail.YAIL_DEFINE_FORM = "(define-form ";
+Blockly.Yail.YAIL_DEFINE_TASK = "(define-task ";
 Blockly.Yail.YAIL_DO_AFTER_FORM_CREATION = "(do-after-form-creation ";
 Blockly.Yail.YAIL_DOUBLE_QUOTE = "\"";
 Blockly.Yail.YAIL_FALSE = "#f";
@@ -64,7 +65,7 @@ Blockly.Yail.YAIL_AND_DELAYED = "(and-delayed ";
 Blockly.Yail.YAIL_OR_DELAYED = "(or-delayed ";
 Blockly.Yail.YAIL_IF = "(if ";
 Blockly.Yail.YAIL_INIT_RUNTIME = "(init-runtime)";
-Blockly.Yail.YAIL_INITIALIZE_COMPONENTS = "(call-Initialize-of-components";
+Blockly.Yail.YAIL_INITIALIZE_COMPONENTS = "(call-Initialize-of-components ";
 Blockly.Yail.YAIL_LET = "(let ";
 Blockly.Yail.YAIL_LEXICAL_VALUE = "(lexical-value ";
 Blockly.Yail.YAIL_SET_LEXICAL_VALUE = "(set-lexical! ";
@@ -235,7 +236,7 @@ Blockly.Yail.wrapForRepl = function(formName, code, componentNames) {
  * @private
  */
 Blockly.Yail.getComponentInitializationString = function(formName, componentNames) {
-  var code = Blockly.Yail.YAIL_INITIALIZE_COMPONENTS;
+  var code = Blockly.Yail.YAIL_INITIALIZE_COMPONENTS + Blockly.Yail.YAIL_QUOTE + formName;
   code += " " + Blockly.Yail.YAIL_QUOTE + formName;
   for (var i = 0, cName; cName = componentNames[i]; i++) {  // TODO: will we get non-component fields this way?
     if (cName != formName)                                  // Avoid duplicate initialization of the form
@@ -320,7 +321,9 @@ Blockly.Yail.getComponentPropertiesLines = function(formName, componentJson, par
   // but first feed it to propertyNameConverter function passed in. This may
   // trim it back to just the simple component name if we are sending this yail
   // to an older companion
-  code.push(Blockly.Yail.YAIL_ADD_COMPONENT + parentName + Blockly.Yail.YAIL_SPACER +
+  code.push(Blockly.Yail.YAIL_ADD_COMPONENT +
+    formName + Blockly.Yail.YAIL_SPACER +
+    parentName + Blockly.Yail.YAIL_SPACER +
     propertyNameConverter(Blockly.ComponentTypes[componentType].type) +
     Blockly.Yail.YAIL_SPACER + componentName + Blockly.Yail.YAIL_SPACER);
   code = code.concat(Blockly.Yail.getPropertySettersLines(componentJson, componentName));
@@ -349,8 +352,8 @@ Blockly.Yail.getFormPropertiesLines = function(formName, componentJson, includeC
     // WARNING:  There may be other type errors of this sort in this file, which
     // (hopefully) will be uncovered in testing. Please
     // be alert for these errors and check carefully.
-    code.push(Blockly.Yail.YAIL_DO_AFTER_FORM_CREATION + yailForComponentProperties.join(" ") + 
-      Blockly.Yail.YAIL_CLOSE_BLOCK);
+    code.push(Blockly.Yail.YAIL_DO_AFTER_FORM_CREATION + formName + Blockly.Yail.YAIL_SPACER
+      + yailForComponentProperties.join(" ") + Blockly.Yail.YAIL_CLOSE_BLOCK);
   }
   return code;
 }
@@ -386,8 +389,9 @@ Blockly.Yail.getPropertySettersLines = function(componentJson, componentName) {
  */
 Blockly.Yail.getPropertySetterString = function(componentName, componentType, propertyName, 
   propertyValue) {
-  var code = Blockly.Yail.YAIL_SET_AND_COERCE_PROPERTY + Blockly.Yail.YAIL_QUOTE + 
-    componentName + Blockly.Yail.YAIL_SPACER + Blockly.Yail.YAIL_QUOTE + propertyName + 
+  var code = Blockly.Yail.YAIL_SET_AND_COERCE_PROPERTY + Blockly.Yail.YAIL_QUOTE +
+    Blockly.BlocklyEditor.formName + Blockly.Yail.YAIL_SPACER + Blockly.Yail.YAIL_QUOTE +
+    componentName + Blockly.Yail.YAIL_SPACER + Blockly.Yail.YAIL_QUOTE + propertyName +
     Blockly.Yail.YAIL_SPACER;
   var propType = Blockly.Yail.YAIL_QUOTE + 
     Blockly.ComponentTypes[componentType].properties[propertyName].type;
@@ -425,7 +429,7 @@ Blockly.Yail.getPropertyValueString = function(propertyValue, propertyType) {
     if (propertyValue == "") {
       return "\"\"";
     } else {
-      return Blockly.Yail.YAIL_GET_COMPONENT + propertyValue + ")";
+      return Blockly.Yail.YAIL_GET_COMPONENT + Blockly.BlocklyEditor.formName + Blockly.Yail.YAIL_SPACER + propertyValue + ")";
     }
   }
 
@@ -444,7 +448,8 @@ Blockly.Yail.getPropertyValueString = function(propertyValue, propertyType) {
  * @private
  */
 Blockly.Yail.getComponentRenameString = function(oldName, newName) {
-  return Blockly.Yail.YAIL_RENAME_COMPONENT + Blockly.Yail.quotifyForREPL(oldName)
+  return Blockly.Yail.YAIL_RENAME_COMPONENT + Blockly.BlocklyEditor.formName
+    + Blockly.Yail.YAIL_SPACER + Blockly.Yail.quotifyForREPL(oldName)
     + Blockly.Yail.YAIL_SPACER + Blockly.Yail.quotifyForREPL(newName)
     + Blockly.Yail.YAIL_CLOSE_BLOCK;
 }
