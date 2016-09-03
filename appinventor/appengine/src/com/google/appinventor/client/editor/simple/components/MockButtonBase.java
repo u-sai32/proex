@@ -72,7 +72,7 @@ abstract class MockButtonBase extends MockVisibleComponent {
     DeckPanel deckPanel = new DeckPanel();
     deckPanel.setStylePrimaryName("ode-SimpleMockComponent");
     deckPanel.add(buttonWidget);
-    deckPanel.add(image);
+//    deckPanel.add(image);  Uncommenting this causes chromehang. Maybe chrome can't handle too many instances of added image.
     deckPanel.showWidget(0);
     initComponent(deckPanel);
   }

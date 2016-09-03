@@ -280,6 +280,12 @@ public final class SimpleComponentDescriptor {
    * Instantiates mock component by name.
    */
   public static MockComponent createMockComponent(String name, SimpleEditor editor) {
+//  Uncommenting this will definitely load the Project since MockVerticalArrangement is a light mock component.
+//  Representing all components with MockVertical Arrangement
+//  boolean truth = true;
+//    if (truth) {
+//      return new MockVerticalArrangement(editor);
+//    }
     if (SimpleComponentDatabase.getInstance(editor.getProjectId()).getNonVisible(name)) {
       if(name.equals(MockFirebaseDB.TYPE)) {
         return new MockFirebaseDB(editor, name,
@@ -289,7 +295,8 @@ public final class SimpleComponentDescriptor {
           getImageFromPath(SimpleComponentDatabase.getInstance(editor.getProjectId()).getIconName(name)));
       }
     } else if (name.equals(MockButton.TYPE)) {
-      return new MockButton(editor);
+      return new MockButton(editor);  // MockButton seems to be a heavy mock component. Too much of it will cause chromehang
+      // return new MockLabel(editor);  // Use this return statement and you will find that the project will load. (Too many labels don't seem to be a problem for chrome)
     } else if (name.equals(MockCanvas.TYPE)) {
       return new MockCanvas(editor);
     } else if (name.equals(MockCheckBox.TYPE)) {

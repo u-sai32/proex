@@ -497,7 +497,9 @@ public final class YaFormEditor extends SimpleEditor implements FormChangeListen
   private void onFileLoaded(String content) {
     JSONObject propertiesObject = YoungAndroidSourceAnalyzer.parseSourceFile(
         content, JSON_PARSER);
+    Ode.consoleLog("load2 (form): done Parsing. About to create MockComps");
     form = createMockForm(propertiesObject.getProperties().get("Properties").asObject());
+    Ode.consoleLog("load2 (form): done MockComps.");
 
     // Initialize the nonVisibleComponentsPanel and visibleComponentsPanel.
     nonVisibleComponentsPanel.setForm(form);
