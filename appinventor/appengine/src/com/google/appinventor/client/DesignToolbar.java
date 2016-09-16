@@ -143,7 +143,7 @@ public class DesignToolbar extends Toolbar {
 
   // Enum for type of view showing in the design tab
   public enum View {
-    CONTEXT,   // Context editor view
+    CONTEXT,   // YoungAndroidContext editor view
     BLOCKS  // Blocks editor view
   }
   public View currentView = View.CONTEXT;

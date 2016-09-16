@@ -13,7 +13,7 @@ import com.google.gwt.user.client.ui.MenuItemSeparator;
 import com.google.gwt.user.client.ui.PopupPanel;
 
 /**
- * Context menu widget implementation.
+ * YoungAndroidContext menu widget implementation.
  *
  */
 public final class ContextMenu {

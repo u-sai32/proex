@@ -227,8 +227,7 @@ Blockly.Yail.setproperty = function() {
   var propType = this.getPropertyObject(propertyName).type
   var assignLabel = Blockly.Yail.YAIL_QUOTE + this.getFieldValue("COMPONENT_SELECTOR") + Blockly.Yail.YAIL_SPACER
     + Blockly.Yail.YAIL_QUOTE + propertyName;
-  var code = Blockly.Yail.YAIL_SET_AND_COERCE_PROPERTY + Blockly.Yail.YAIL_QUOTE +
-    Blockly.Yail.contextName + Blockly.Yail.YAIL_SPACER + assignLabel + Blockly.Yail.YAIL_SPACER;
+  var code = Blockly.Yail.YAIL_SET_AND_COERCE_PROPERTY + assignLabel + Blockly.Yail.YAIL_SPACER;
   // TODO(hal, andrew): check for empty socket and generate error if necessary
   code = code.concat(Blockly.Yail.valueToCode(this, 'VALUE', Blockly.Yail.ORDER_NONE /*TODO:?*/));
   code = code.concat(Blockly.Yail.YAIL_SPACER + Blockly.Yail.YAIL_QUOTE
@@ -250,7 +249,6 @@ Blockly.Yail.genericSetproperty = function() {
   var assignLabel = Blockly.Yail.YAIL_QUOTE + Blockly.ComponentTypes[this.typeName].type + Blockly.Yail.YAIL_SPACER
     + Blockly.Yail.YAIL_QUOTE + propertyName;
   var code = Blockly.Yail.YAIL_SET_AND_COERCE_COMPONENT_TYPE_PROPERTY
-    + Blockly.Yail.YAIL_QUOTE + Blockly.Yail.contextName + Blockly.YAIL_SPACER
     // TODO(hal, andrew): check for empty socket and generate error if necessary
     + Blockly.Yail.valueToCode(this, 'COMPONENT', Blockly.Yail.ORDER_NONE)
     + Blockly.Yail.YAIL_SPACER

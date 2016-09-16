@@ -93,7 +93,7 @@ public class TextViewUtil {
    * Returns the font size for a {@link TextView}.
    *
    * @param textview   text view instance
-   * @param context   Context in the screen to get the density of
+   * @param context   YoungAndroidContext in the screen to get the density of
    * @return  font size in pixel
    */
   public static float getFontSize(TextView textview, Context context) {

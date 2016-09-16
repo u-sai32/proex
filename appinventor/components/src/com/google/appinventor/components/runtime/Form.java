@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import android.os.Message;
 import org.json.JSONException;
 
 import android.app.Activity;
@@ -64,7 +65,6 @@ import com.google.appinventor.components.runtime.collect.Lists;
 import com.google.appinventor.components.runtime.collect.Maps;
 import com.google.appinventor.components.runtime.collect.Sets;
 import com.google.appinventor.components.runtime.multidex.MultiDex;
-import com.google.appinventor.components.runtime.multidex.MultiDexApplication;
 import com.google.appinventor.components.runtime.util.AlignmentUtil;
 import com.google.appinventor.components.runtime.util.AnimationUtil;
 import com.google.appinventor.components.runtime.util.ErrorMessages;
@@ -97,7 +97,7 @@ import com.google.appinventor.components.runtime.util.ViewUtil;
 @SimpleObject
 @UsesPermissions(permissionNames = "android.permission.INTERNET,android.permission.ACCESS_WIFI_STATE,android.permission.ACCESS_NETWORK_STATE")
 public class Form extends Activity
-  implements Component, ComponentContainer, HandlesEventDispatching,
+  implements YoungAndroidContext, Component, ComponentContainer, HandlesEventDispatching,
   OnGlobalLayoutListener {
 
   private static final String LOG_TAG = "Form";
@@ -236,6 +236,17 @@ public class Form extends Activity
     }
   }
 
+  protected class FormHandler extends Handler {
+
+    @Override
+    public void handleMessage(Message msg) {
+
+    }
+
+  }
+
+  protected FormHandler formHandler;
+
   @Override
   public void onCreate(Bundle icicle) {
     // Called when the activity is first created
@@ -249,6 +260,9 @@ public class Form extends Activity
 
     activeForm = this;
     Log.i(LOG_TAG, "activeForm is now " + activeForm.formName);
+
+    // Create formHandler for communication
+    formHandler = new FormHandler();
 
     deviceDensity = this.getResources().getDisplayMetrics().density;
     Log.d(LOG_TAG, "deviceDensity = " + deviceDensity);
@@ -1894,6 +1908,10 @@ public class Form extends Activity
     System.err.println("Form.clear() About to do moby GC!");
     System.gc();
     dimChanges.clear();
+  }
+
+  public String getFormName() {
+    return formName;
   }
 
   public void deleteComponent(Object component) {

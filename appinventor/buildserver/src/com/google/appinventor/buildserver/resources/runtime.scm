@@ -294,6 +294,7 @@
          (android-log (format #f "Copying component properties for ~A" component-name))
          (SimplePropertyUtil:copyComponentProperties existing-component component-to-add))))))
 
+(define-alias AndroidLooper <android.os.Looper>)
 (define-alias SimpleForm <com.google.appinventor.components.runtime.Form>)
 (define-alias SimpleTask <com.google.appinventor.components.runtime.Task>)
 
@@ -384,17 +385,17 @@
 ;;; Call a component's property setter method with argument coercion
 ;;; Ex: (set-and-coerce-property! 'Screen1 'Button3 'FontSize 14 'number)
 ;;; Note: see also %set-expanded-property below
-(define (set-and-coerce-property! context component prop-sym property-value property-type)
-  (let ((component (coerce-to-component-and-verify context component)))
-    (%set-and-coerce-property! context component prop-sym property-value property-type)))
+(define (set-and-coerce-property! component prop-sym property-value property-type)
+  (let ((component (coerce-to-component-and-verify component)))
+    (%set-and-coerce-property! component prop-sym property-value property-type)))
 
-;;; (get-property 'Screen1 'Label1 'Text)
-(define (get-property context component prop-name)
-  (let ((component (coerce-to-component-and-verify context component)))
+;;; (get-property 'Label1 'Text)
+(define (get-property component prop-name)
+  (let ((component (coerce-to-component-and-verify component)))
     (sanitize-component-data (invoke component prop-name))))
 
-(define (coerce-to-component-and-verify context possible-component)
-  (let ((component (coerce-to-component context possible-component)))
+(define (coerce-to-component-and-verify possible-component)
+  (let ((component (coerce-to-component possible-component)))
     (if (not (instance? component com.google.appinventor.components.runtime.Component))
         (signal-runtime-error
          (string-append "Cannot find the component: "
@@ -402,8 +403,8 @@
          "Problem with application")
         component)))
 
-(define (get-property-and-check context possible-component component-type prop-name)
-  (let ((component (coerce-to-component-of-type context possible-component component-type)))
+(define (get-property-and-check possible-component component-type prop-name)
+  (let ((component (coerce-to-component-of-type possible-component component-type)))
     (if (not (instance? component com.google.appinventor.components.runtime.Component))
         (signal-runtime-error
          (format #f "Property getter was expecting a ~A component but got a ~A instead."
@@ -412,15 +413,15 @@
          "Problem with application")
         (sanitize-component-data (invoke component prop-name)))))
 
-(define (set-and-coerce-property-and-check! context possible-component comp-type prop-sym property-value property-type)
-  (let ((component (coerce-to-component-of-type context possible-component comp-type)))
+(define (set-and-coerce-property-and-check! possible-component comp-type prop-sym property-value property-type)
+  (let ((component (coerce-to-component-of-type possible-component comp-type)))
     (if (not (instance? component com.google.appinventor.components.runtime.Component))
         (signal-runtime-error
          (format #f "Property setter was expecting a ~A component but got a ~A instead."
                  comp-type
                  (*:getSimpleName (*:getClass possible-component)))
          "Problem with application")
-        (%set-and-coerce-property! context component prop-sym property-value property-type))))
+        (%set-and-coerce-property! component prop-sym property-value property-type))))
 
 ;;; Global variables
 
@@ -842,7 +843,7 @@
        (define global-vars-to-create  :: gnu.lists.LList '())
 
        ;; Add to the list of global variable to create.
-       (define (add-to-global-vars var val-thunk) ;;TODO (AI2S) : add context
+       (define (add-to-global-vars var val-thunk)
          (set! global-vars-to-create
                (cons (list var val-thunk)
                      global-vars-to-create)))
@@ -1144,25 +1145,42 @@
 ;;; form has been created.  Used for setting the inital form properties
 (define-syntax do-after-form-creation
   (syntax-rules ()
-    ((_ context expr ...)
-     (if *this-is-the-repl*
-         (begin (register-context 'context) expr ...)
-         (add-to-form-do-after-creation (delay (begin expr ...)))))))
+    ((_ form expr ...)
+     (begin (register-form 'form)
+         (if *this-is-the-repl*
+             (begin expr ...)
+             (add-to-form-do-after-creation (delay (begin expr ...))))))))
 
 (define-syntax do-after-task-creation
   (syntax-rules ()
-    ((_ expr ...)
-     (if *this-is-the-repl*
-         (begin expr ...)
-         (add-to-task-do-after-creation (delay (begin expr ...)))))))
+    ((_ task expr ...)
+     (begin (register-task 'task)
+         (if *this-is-the-repl*
+             (begin expr ...)
+             (add-to-task-do-after-creation (delay (begin expr ...))))))))
 
-(define (register-context context :: gnu.mapping.Symbol)
+(define (register-form context :: gnu.mapping.Symbol)
     (set-this-form)
     (if *this-is-the-repl*
         (begin (add-to-context-environments context (*:.form-environment *this-form*) )
                (add-to-context-environment context context *this-form* )
                (add-to-context-global-var-environments context (*:.global-var-environment *this-form*) )
-               (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks"))))))
+               (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks"))))
+        (begin (add-to-context-environments context (*:.form-environment *this-form*) )
+               (add-to-context-environment context context *this-form* )
+               (add-to-context-global-var-environments context (*:.global-var-environment *this-form*)))))
+
+(define (register-task context :: gnu.mapping.Symbol)
+    (set-this-task (symbol->string context))
+    (if *this-is-the-repl*
+        (begin (set-repl-task) ;;redo
+               (add-to-context-environments context (gnu.mapping.Environment:make (symbol->string context)))
+               (add-to-context-environment context context *this-task* )
+               (add-to-context-global-var-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-global-vars"))))
+               (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks"))))
+        (begin (add-to-context-environments context (*:.task-environment *this-task* ) )
+               (add-to-context-environment context context *this-task*)
+               (add-to-context-global-var-environments context (*:.global-var-environment *this-task*))))
 
 ;; The following environments are really just for testing.
 (define *test-environment* (gnu.mapping.Environment:make 'test-env))
@@ -1230,6 +1248,13 @@
 (define (reset-current-form-environment)
   (if (not (eq? *this-form* #!null))
       (let ((form-name (*:.form-name-symbol *this-form*)))
+        ;; Clear and Remove old environments
+        (clear-context-environment form-name)
+        (remove-from-context-environments form-name)
+        (clear-context-global-var-environment form-name)
+        (remove-from-context-global-var-environments form-name)
+        (clear-context-init-thunk-environment form-name)
+        (remove-from-context-init-thunk-environments form-name)
         ;; Create a new environment
         (set! (*:.form-environment *this-form*)
               (gnu.mapping.Environment:make (symbol->string form-name)))
@@ -1352,7 +1377,7 @@
 
 
 (define (call-component-method context component-name method-name arglist typelist)
-  (let ((coerced-args (coerce-args context method-name arglist typelist)))
+  (let ((coerced-args (coerce-args method-name arglist typelist)))
     (let ((result
            (if (all-coercible? coerced-args)
                (apply invoke
@@ -1376,8 +1401,8 @@
   ;; Note that we use the cdr of the typelist because it contains the generic
   ;; 'component' type for the component and we want to check the more specific type
   ;; that is passed in via the component-type argument
-  (let ((coerced-args (coerce-args context method-name arglist (cdr typelist)))
-        (component-value (coerce-to-component-of-type context possible-component component-type)))
+  (let ((coerced-args (coerce-args method-name arglist (cdr typelist)))
+        (component-value (coerce-to-component-of-type possible-component component-type)))
     (if (not (instance? component-value com.google.appinventor.components.runtime.Component))
         (generate-runtime-type-error method-name
                                      (list (get-display-representation possible-component)))
@@ -1431,9 +1456,9 @@
 ;;; Try removing this code entirely and inlining it in the parser, including
 ;;; optimizing out coercion for constants.
 
-(define (call-yail-primitive context prim arglist typelist codeblocks-name)
+(define (call-yail-primitive prim arglist typelist codeblocks-name)
   ;; (android-log (format #f "applying procedure: ~A to ~A" codeblocks-name arglist))
-  (let ((coerced-args (coerce-args context codeblocks-name arglist typelist)))
+  (let ((coerced-args (coerce-args codeblocks-name arglist typelist)))
     (if (all-coercible? coerced-args)
         ;; note that we don't need to sanitize because this is coming from a Yail primitive
         (apply prim coerced-args)
@@ -1543,18 +1568,18 @@
 ;;; This is currently used only for primitives, which is why, unlike "call", we're
 ;;; not putting "get-var" around the function name.
 ;;; WARNING: We need to think about this if we're going to rely on get-var to catch unbound identifiers
-(define (call-with-coerced-args context func arglist typelist codeblocks-name)
+(define (call-with-coerced-args func arglist typelist codeblocks-name)
   ;; (android-log (format #f "applying procedure: ~A to ~A" codeblocks-name arglist))
-  (let ((coerced-args (coerce-args context codeblocks-name arglist typelist)))
+  (let ((coerced-args (coerce-args codeblocks-name arglist typelist)))
     (if (all-coercible? coerced-args)
         (apply func coerced-args)
         (generate-runtime-type-error codeblocks-name arglist))))
 
 ;;; Call a component's property setter method with argument coercion
 ;;; Ex: (%set-and-coerce-property! Button3 'FontSize 14 'number)
-(define (%set-and-coerce-property! context comp prop-name property-value property-type)
+(define (%set-and-coerce-property! comp prop-name property-value property-type)
   (android-log (format #f "coercing for setting property ~A -- value ~A to type ~A" prop-name property-value property-type))
-  (let ((coerced-arg (coerce-arg context property-value property-type)))
+  (let ((coerced-arg (coerce-arg property-value property-type)))
     (android-log (format #f "coerced property value was: ~A " coerced-arg))
     (if (all-coercible? (list coerced-arg))
         (invoke comp prop-name coerced-arg)
@@ -1602,7 +1627,7 @@
 
 ;;; Coerce the list of args to the corresponding list of types
 
-(define (coerce-args context procedure-name arglist typelist)
+(define (coerce-args procedure-name arglist typelist)
   (cond ((null? typelist)
          (if (null? arglist)
              arglist
@@ -1619,10 +1644,9 @@
                          " are the wrong number of arguments for " (get-display-representation procedure-name))
           (string-append "Wrong number of arguments for" (get-display-representation procedure-name))))
         (else
-          (let ((contextlist (YailList:makeList (length arglist) context)))
-            (map coerce-arg contextlist arglist typelist)) )))
+            (map coerce-arg arglist typelist))))
 
-(define (coerce-arg context arg type)
+(define (coerce-arg arg type)
   (let ((arg (sanitize-atomic arg)))
     (cond
      ((equal? type 'number) (coerce-to-number arg))
@@ -1630,9 +1654,9 @@
      ((equal? type 'boolean) (coerce-to-boolean arg))
      ((equal? type 'list) (coerce-to-yail-list arg))
      ((equal? type 'InstantInTime) (coerce-to-instant arg))
-     ((equal? type 'component) (coerce-to-component context arg))
+     ((equal? type 'component) (coerce-to-component arg))
      ((equal? type 'any) arg)
-     (else (coerce-to-component-of-type context arg type)))))
+     (else (coerce-to-component-of-type arg type)))))
 
 ;;; We can coerce *the-null-value* to a string for printing in error messages
 ;;; but we don't consider it to be a Yail text for use in
@@ -1647,18 +1671,18 @@
    ((instance? arg java.util.Calendar) arg)
    (else *non-coercible-value*)))
 
-(define (coerce-to-component context arg)
+(define (coerce-to-component arg)
   (cond
    ((string? arg)
     (if (string=? arg "")
         *the-null-value*
-        (lookup-component context (string->symbol arg))))
+        (lookup-component (get-current-context-symbol) (string->symbol arg))))
    ((instance? arg com.google.appinventor.components.runtime.Component) arg)
-   ((symbol? arg) (lookup-component context arg))
+   ((symbol? arg) (lookup-component (get-current-context-symbol) arg))
    (else *non-coercible-value*)))
 
-(define (coerce-to-component-of-type context arg type)
-  (let ((component (coerce-to-component context arg)))
+(define (coerce-to-component-of-type arg type)
+  (let ((component (coerce-to-component arg)))
     (if (eq? component *non-coercible-value*)
         *non-coercible-value*
         ;; We have to trick the Kawa compiler into not open-coding "instance?"
@@ -2917,7 +2941,8 @@ list, use the make-yail-list constructor with no arguments.
 (define-syntax process-repl-input
   (syntax-rules ()
     ((_ blockid expr)
-     (in-ui blockid (delay expr)))))
+     (begin (android-log (format #f "Out UI Thread : ~A" (java.lang.Thread:currentThread)))
+            (in-ui blockid (delay expr))))))
 
 ;; This code causes the evaluation of the code sent to the phone. Output
 ;; is normally generated by "Report Execution" balloons attached to blocks
@@ -2986,7 +3011,11 @@ list, use the make-yail-list constructor with no arguments.
 
 (define *ui-handler* #!null)
 (define *this-form* #!null)
-(define *active-task* #!null)
+(define *this-task* #!null)
+(define *repl-task* #!null)
+
+;;; *current-context* :  is the symbol name of the context being processed by repl or the compiled context
+(define *current-context* :: gnu.mapping.Symbol #!null)
 
 
 ;;; This is called as part of the code that sets up the form in the phone application.
@@ -2995,7 +3024,7 @@ list, use the make-yail-list constructor with no arguments.
 
 (define (init-runtime)
   (set-this-form)
-  (set-active-task)
+  (set-repl-task)
   (set! *ui-handler* (android.os.Handler)))
 
 
@@ -3007,9 +3036,40 @@ list, use the make-yail-list constructor with no arguments.
 (define (set-this-form)
   (set! *this-form* (SimpleForm:getActiveForm)))
 
-(define (set-active-task)
-    (set! *active-task* (SimpleTask:getActiveTask)))
+(define (set-this-task task-name)
+    (set! *this-task* (SimpleTask:getTask task-name)))
 
+(define (set-repl-task)
+  (set! *repl-task* (SimpleTask:getReplTask)))
+
+(define (set-current-context context)
+  (set! *current-context* context))
+
+(define (is-current-context-form) :: boolean
+  (if (eq? (android.os.Looper:myLooper) (android.os.Looper:getMainLooper))
+    #t
+    #f))
+
+(define (is-current-context-task) :: boolean
+  (if (instance? (java.lang.Thread:currentThread) SimpleTask.TaskThread)
+      #t
+      #f))
+
+(define (get-current-context-name) :: <java.lang.String>
+    (cond
+        ((is-current-context-form)
+            (let ((current-context (SimpleForm:getActiveForm)))
+                (current-context:getFormName)))
+        ((is-current-context-task)
+            (java.lang.Thread:getName))))
+
+(define (get-current-context-symbol) :: <gnu.mapping.Symbol>
+    (android-log (format "current context name is ~A" (get-current-context-name)) )
+    (string->symbol (get-current-context-name)))
+
+(define (get-current-context-instance)
+    (let ((current-context-name (get-current-context-symbol)))
+        (get-context-instance current-context-name)))
 
 ;; For Testing
 ;; Rather than hacking tests into a Java tests we're puting low-cost tests of

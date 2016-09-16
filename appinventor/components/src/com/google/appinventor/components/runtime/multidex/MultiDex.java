@@ -107,7 +107,7 @@ public final class MultiDex {
         try {
             ApplicationInfo applicationInfo = getApplicationInfo(context);
             if (applicationInfo == null) {
-                // Looks like running on a test Context, so just return without patching.
+                // Looks like running on a test YoungAndroidContext, so just return without patching.
                 Log.d(TAG, "applicationInfo is null, returning");
                 return true;
             }
@@ -137,18 +137,18 @@ public final class MultiDex {
                 try {
                     loader = context.getClassLoader();
                 } catch (RuntimeException e) {
-                    /* Ignore those exceptions so that we don't break tests relying on Context like
+                    /* Ignore those exceptions so that we don't break tests relying on YoungAndroidContext like
                      * a android.test.mock.MockContext or a android.content.ContextWrapper with a
-                     * null base Context.
+                     * null base YoungAndroidContext.
                      */
-                    Log.w(TAG, "Failure while trying to obtain Context class loader. " +
+                    Log.w(TAG, "Failure while trying to obtain YoungAndroidContext class loader. " +
                             "Must be running in test mode. Skip patching.", e);
                     return true;
                 }
                 if (loader == null) {
                     // Note, the context class loader is null when running Robolectric tests.
                     Log.e(TAG,
-                            "Context class loader is null. Must be running in test mode. "
+                            "YoungAndroidContext class loader is null. Must be running in test mode. "
                             + "Skip patching.");
                     return true;
                 }
@@ -199,11 +199,11 @@ public final class MultiDex {
             pm = context.getPackageManager();
             packageName = context.getPackageName();
         } catch (RuntimeException e) {
-            /* Ignore those exceptions so that we don't break tests relying on Context like
+            /* Ignore those exceptions so that we don't break tests relying on YoungAndroidContext like
              * a android.test.mock.MockContext or a android.content.ContextWrapper with a null
-             * base Context.
+             * base YoungAndroidContext.
              */
-            Log.w(TAG, "Failure while trying to obtain ApplicationInfo from Context. " +
+            Log.w(TAG, "Failure while trying to obtain ApplicationInfo from YoungAndroidContext. " +
                     "Must be running in test mode. Skip patching.", e);
             return null;
         }

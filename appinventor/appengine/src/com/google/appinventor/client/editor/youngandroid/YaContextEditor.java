@@ -47,7 +47,7 @@ public abstract class YaContextEditor extends SimpleEditor implements ComponentD
     }
   }
 
-  // Enum for type of Context Editor
+  // Enum for type of YoungAndroidContext Editor
   public enum EditorType {
     FORM,
     TASK

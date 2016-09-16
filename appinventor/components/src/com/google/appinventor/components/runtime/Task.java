@@ -8,8 +8,12 @@ package com.google.appinventor.components.runtime;
 import android.app.Service;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Handler;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
+import android.os.Message;
+import android.os.Process;
 import android.util.Log;
 import com.google.appinventor.components.annotations.*;
 import com.google.appinventor.components.common.ComponentCategory;
@@ -21,6 +25,8 @@ import com.google.appinventor.components.runtime.util.OnInitializeListener;
 
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 
 /**
@@ -39,9 +45,72 @@ public class Task extends Service
     implements Component, ComponentContainer, HandlesEventDispatching {
   private static final String LOG_TAG = "Task";
 
-  private static Task activeTask = null;
+  protected static Map<String, Task> taskMap = new HashMap<String, Task>();
 
-  private String taskName;
+  protected static Task replTask = null;
+
+  protected String taskName;
+
+  protected class TaskHandler extends Handler {
+
+    protected TaskHandler(Looper looper) {
+      super(looper);
+    }
+
+    @Override
+    public void handleMessage(Message msg) {
+
+    }
+
+  }
+
+  protected class TaskThread extends HandlerThread {
+
+    protected TaskHandler taskHandler;
+
+    protected final Task task;
+
+    public TaskThread(Task task) {
+      super(task.getTaskName());
+      this.task = task;
+    }
+
+    public TaskThread(Task task, int priority) {
+      super(task.getTaskName(), priority);
+      this.task = task;
+    }
+
+    @Override
+    public void start() {
+      super.start();
+      prepareHandler(); // Prepares our Handler for communication
+    }
+
+    public void start(TaskHandler taskHandler) {
+      super.start();
+      prepareHandler(taskHandler);
+    }
+
+    protected void prepareHandler() {
+      taskHandler = new TaskHandler(getLooper());
+    }
+
+    protected void prepareHandler(TaskHandler taskHandler) {
+      this.taskHandler = taskHandler;
+    }
+
+
+    public TaskHandler getTaskHandler() {
+      return taskHandler;
+    }
+
+    public Task getTask() {
+      return task;
+    }
+  }
+
+  TaskThread taskThread;
+
 
   // Application lifecycle related fields
   private final Set<OnDestroyListener> onDestroyListeners = Sets.newHashSet();
@@ -55,12 +124,14 @@ public class Task extends Service
   public void onCreate() {
     super.onCreate();
 
-    activeTask = this;
-
     String className = getClass().getName();
     int lastDot = className.lastIndexOf('.');
     taskName = className.substring(lastDot + 1);
     Log.d(LOG_TAG, "Task " + taskName + " got onCreate");
+
+    taskThread = new TaskThread(this);
+
+    taskMap.put(taskName, this);
 
     if (Thread.currentThread() == Looper.getMainLooper().getThread()) {
       Log.d(LOG_TAG, "Task " + taskName + " same Thread as Main UI" + Thread.currentThread() );
@@ -68,6 +139,8 @@ public class Task extends Service
     else {
       Log.d(LOG_TAG, "Task " + taskName + "thread not main UI thread" + Thread.currentThread() );
     }
+
+
 
     $define();
 
@@ -140,6 +213,7 @@ public class Task extends Service
       onDestroyListener.onDestroy();
     }
     super.onDestroy();
+    taskMap.remove(taskName);
     // for debugging and future growth
     Log.i(LOG_TAG, "Task " + taskName + " got onDestroy");
 
@@ -275,8 +349,12 @@ public class Task extends Service
     return 0;
   }
 
-  public static Task getActiveTask() {
-    return activeTask;
+  public static Task getReplTask() {
+    return replTask;
+  }
+
+  public static Task getTask(String taskName) {
+    return taskMap.get(taskName);
   }
 
   /**
@@ -335,6 +413,10 @@ public class Task extends Service
       Log.i(LOG_TAG, "invoke exception: " + e.getMessage());
       throw e.getTargetException();
     }
+  }
+
+  public String getTaskName() {
+    return taskName;
   }
 
 }

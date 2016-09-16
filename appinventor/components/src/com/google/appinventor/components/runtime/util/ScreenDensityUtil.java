@@ -38,7 +38,7 @@ public final class ScreenDensityUtil {
    * Compute the scaling for applications runs under compatibility mode.
    * This code is partially taken from CompatibilityInfo.java from the Android 5.0 source
    *
-   * @param context Context in the screen to get the density of
+   * @param context YoungAndroidContext in the screen to get the density of
    * @return Returns the scaling factor for the window.
    */
   public static float computeCompatibleScaling(Context context) {

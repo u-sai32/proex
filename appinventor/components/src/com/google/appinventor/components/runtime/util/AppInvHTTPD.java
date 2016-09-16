@@ -182,6 +182,7 @@ public class AppInvHTTPD extends NanoHTTPD {
       Log.d(LOG_TAG, "To Eval: " + code);
 
       Response res;
+      Log.d(LOG_TAG, "Eval Thread Name : " + Thread.currentThread());
       form.loadComponents();  // load all components before Eval
       try {
         // Don't evaluate a simple "#f" which is used by the poller

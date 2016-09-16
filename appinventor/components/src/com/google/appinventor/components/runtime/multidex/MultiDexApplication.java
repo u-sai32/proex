@@ -26,7 +26,7 @@ import android.content.Context;
  * <li>Have your {@link Application} extends this class.</li>
  * <li>Have your {@link Application} override attachBaseContext starting with<br>
  * <code>
-  protected void attachBaseContext(Context base) {<br>
+  protected void attachBaseContext(YoungAndroidContext base) {<br>
     super.attachBaseContext(base);<br>
     MultiDex.install(this);
     </code></li>

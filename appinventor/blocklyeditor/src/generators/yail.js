@@ -33,6 +33,9 @@ Blockly.Yail.ORDER_ATOMIC = 0;         // 0 "" ...
 Blockly.Yail.ORDER_NONE = 99;          // (...)
 
 Blockly.Yail.YAIL_ADD_COMPONENT = "(add-component ";
+Blockly.Yail.YAIL_ADD_TO_CONTEXT_ENVIRONMENTS = "(add-to-context-environments ";
+Blockly.Yail.YAIL_ADD_TO_CONTEXT_GLOBAL_VAR_ENVIRONMENTS = "(add-to-global-var-context-environments ";
+Blockly.Yail.YAIL_ADD_TO_CONTEXT_INIT_THUNK_ENVIRONMENTS = "(add-to-context-init-thunk-environments ";
 Blockly.Yail.YAIL_ADD_TO_LIST = "(add-to-list ";
 Blockly.Yail.YAIL_BEGIN = "(begin ";
 Blockly.Yail.YAIL_CALL_COMPONENT_METHOD = "(call-component-method ";
@@ -315,6 +318,7 @@ Blockly.Yail.wrapForRepl = function(formName, code, componentNames) {
   var replCode = [];
   replCode.push(Blockly.Yail.YAIL_BEGIN);
   replCode.push(Blockly.Yail.YAIL_CLEAR_FORM);
+  Blockly.Yail.contextName = formName;
   if (formName != "Screen1") {
     // If this form is not named Screen1, then the REPL won't be able to resolve any references
     // to it or to any properties on the form itself (such as Title, BackgroundColor, etc) unless
@@ -520,7 +524,6 @@ Blockly.Yail.getPropertySettersLines = function(componentJson, componentName) {
 Blockly.Yail.getPropertySetterString = function(componentName, componentType, propertyName, 
   propertyValue) {
   var code = Blockly.Yail.YAIL_SET_AND_COERCE_PROPERTY + Blockly.Yail.YAIL_QUOTE +
-    Blockly.Yail.contextName + Blockly.Yail.YAIL_SPACER + Blockly.Yail.YAIL_QUOTE +
     componentName + Blockly.Yail.YAIL_SPACER + Blockly.Yail.YAIL_QUOTE + propertyName +
     Blockly.Yail.YAIL_SPACER;
   var propType = Blockly.Yail.YAIL_QUOTE + 
@@ -578,6 +581,7 @@ Blockly.Yail.getPropertyValueString = function(propertyValue, propertyType) {
  * @private
  */
 Blockly.Yail.getComponentRenameString = function(oldName, newName) {
+  console.log("the comp rename conName = " + Blockly.Yail.contextName);
   return Blockly.Yail.YAIL_RENAME_COMPONENT + Blockly.Yail.contextName
     + Blockly.Yail.YAIL_SPACER + Blockly.Yail.quotifyForREPL(oldName)
     + Blockly.Yail.YAIL_SPACER + Blockly.Yail.quotifyForREPL(newName)
