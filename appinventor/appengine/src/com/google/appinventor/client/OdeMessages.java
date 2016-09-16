@@ -1319,6 +1319,20 @@ public interface OdeMessages extends Messages {
   @Description("Label of the button for rename")
   String renameButton();
 
+  // Used in editor/youngandroid/properties/YoungAndroidButtonShapeChoicePropertyEditor.java
+
+  @DefaultMessage("Quick Task")
+  @Description("Text for button shape choice 'default'")
+  String quickTaskType();
+
+  @DefaultMessage("Repeating Task")
+  @Description("Text for button shape choice 'rounded'")
+  String repeatingTaskType();
+
+  @DefaultMessage("rectangular")
+  @Description("Text for button shape choice 'rectangular'")
+  String rectButtonShape();
+
   // Used in explorer/commands/AddFormCommand.java
 
   @DefaultMessage("Add")

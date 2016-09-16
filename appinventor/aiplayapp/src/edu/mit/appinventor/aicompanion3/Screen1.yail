@@ -18,9 +18,7 @@ $Source $Yail
 (def Screen1 g$rendezvousServer "rendezvous.appinventor.mit.edu")
 ;;; Screen1
 
-(do-after-form-creation Screen1 (add-to-context-environments 'Screen1 (*:.form-environment *this-form*) )
-(add-to-context-global-var-environments 'Screen1 (*:.global-var-environment *this-form*) )
-(add-to-context-init-thunk-environments 'Screen1 (*:.form-environment *this-form*) )
+(do-after-form-creation Screen1
  (set-and-coerce-property! 'Screen1 'AlignHorizontal 3 'number)
  (set-and-coerce-property! 'Screen1 'BackgroundColor #x00FFFFFF 'number)
  (set-and-coerce-property! 'Screen1 'BackgroundImage "mooning.png" 'text)

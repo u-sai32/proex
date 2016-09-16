@@ -1161,14 +1161,11 @@
 
 (define (register-form context :: gnu.mapping.Symbol)
     (set-this-form)
+    (add-to-context-environments context (*:.form-environment *this-form*))
+    (add-to-context-environment context context *this-form*)
+    (add-to-context-global-var-environments context (*:.global-var-environment *this-form*))
     (if *this-is-the-repl*
-        (begin (add-to-context-environments context (*:.form-environment *this-form*) )
-               (add-to-context-environment context context *this-form* )
-               (add-to-context-global-var-environments context (*:.global-var-environment *this-form*) )
-               (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks"))))
-        (begin (add-to-context-environments context (*:.form-environment *this-form*) )
-               (add-to-context-environment context context *this-form* )
-               (add-to-context-global-var-environments context (*:.global-var-environment *this-form*)))))
+        (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks")))))
 
 (define (register-task context :: gnu.mapping.Symbol)
     (set-this-task (symbol->string context))

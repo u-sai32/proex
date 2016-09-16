@@ -4,3 +4,5 @@ $Source $Yail
 
 (define-repl-task edu.mit.appinventor.aicompanion3.Task1 Task1)
 (require <com.google.youngandroid.runtime>)
+
+(do-after-task-creation Task1)

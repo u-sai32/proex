@@ -252,5 +252,7 @@ public class PropertyTypeConstants {
    * Choices are 0 - Scale proportionally, 1 - Scale to fit
    * See {@link com.google.appinventor.client.widgets.properties.ScalingChoicePropertyEditor}
    */
-   public static final String PROPERTY_TYPE_SCALING = "scaling";
+  public static final String PROPERTY_TYPE_SCALING = "scaling";
+
+  public static final String PROPERTY_TYPE_TASK_TYPE = "task_type";
 }
