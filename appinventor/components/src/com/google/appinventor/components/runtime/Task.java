@@ -50,6 +50,7 @@ public class Task extends Service
   protected static Task replTask = null;
 
   protected String taskName;
+  protected int taskType;
 
   protected class TaskHandler extends Handler {
 
@@ -355,6 +356,29 @@ public class Task extends Service
 
   public static Task getTask(String taskName) {
     return taskMap.get(taskName);
+  }
+
+  /**
+   * Specifies the Task Behaviour.
+   *
+   * @param tType the type of Task
+   */
+  @DesignerProperty(editorType = PropertyTypeConstants.PROPERTY_TYPE_TASK_TYPE,
+      defaultValue = Component.TASK_TYPE_QUICK + "")
+  @SimpleProperty(userVisible = true,
+      description = "This property determines the basic behaviour of a Task")
+  public void TaskType(int tType) {
+    taskType = tType;
+  }
+
+  /**
+   * Returns the Task Behaviour.
+   *
+   */
+  @SimpleProperty(userVisible = true,
+      description = "This property determines the basic behaviour of a Task")
+  public int TaskType() {
+    return taskType;
   }
 
   /**

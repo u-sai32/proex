@@ -1319,19 +1319,19 @@ public interface OdeMessages extends Messages {
   @Description("Label of the button for rename")
   String renameButton();
 
-  // Used in editor/youngandroid/properties/YoungAndroidButtonShapeChoicePropertyEditor.java
+  // Used in editor/youngandroid/properties/YoungAndroidTaskTypeChoicePropertyEditor.java
 
   @DefaultMessage("Quick Task")
-  @Description("Text for button shape choice 'default'")
+  @Description("Text for task type choice 'Quick Task'")
   String quickTaskType();
 
-  @DefaultMessage("Repeating Task")
-  @Description("Text for button shape choice 'rounded'")
-  String repeatingTaskType();
+  @DefaultMessage("Long Task")
+  @Description("Text for task type choice 'Long Task'")
+  String longTaskType();
 
-  @DefaultMessage("rectangular")
-  @Description("Text for button shape choice 'rectangular'")
-  String rectButtonShape();
+  @DefaultMessage("Repeating Task")
+  @Description("Text for task type choice 'Repeating Task'")
+  String repeatingTaskType();
 
   // Used in explorer/commands/AddFormCommand.java
 
@@ -3544,6 +3544,10 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("Unit")
   @Description("")
   String UnitProperties();
+
+  @DefaultMessage("TaskType")
+  @Description("")
+  String TaskTypeProperties();
 
   //Params
   @DefaultMessage("xAccel")
