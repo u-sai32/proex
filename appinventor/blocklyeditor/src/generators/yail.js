@@ -42,6 +42,7 @@ Blockly.Yail.YAIL_CALL_COMPONENT_METHOD = "(call-component-method ";
 Blockly.Yail.YAIL_CALL_COMPONENT_TYPE_METHOD = "(call-component-type-method ";
 Blockly.Yail.YAIL_CALL_YAIL_PRIMITIVE = "(call-yail-primitive ";
 Blockly.Yail.YAIL_CLEAR_FORM = "(clear-current-form)";
+Blockly.Yail.YAIL_CLEAR_FORM = "(clear-task ";
 // The lines below are complicated because we want to support versions of the
 // Companion older then 2.20ai2 which do not have set-form-name defined
 Blockly.Yail.YAIL_SET_FORM_NAME_BEGIN = "(try-catch (let ((attempt (delay (set-form-name \"";
@@ -314,7 +315,7 @@ Blockly.Yail.getTaskYailPrelude = function(packageName, taskName) {
  * @returns {Array} wrapped code strings
  * @private
  */
-Blockly.Yail.wrapForRepl = function(formName, code, componentNames) {
+Blockly.Yail.wrapFormForRepl = function(formName, code, componentNames) {
   var replCode = [];
   replCode.push(Blockly.Yail.YAIL_BEGIN);
   replCode.push(Blockly.Yail.YAIL_CLEAR_FORM);
@@ -329,6 +330,18 @@ Blockly.Yail.wrapForRepl = function(formName, code, componentNames) {
   }
   replCode = replCode.concat(code);
   replCode.push(Blockly.Yail.getComponentInitializationString(formName, componentNames));
+  replCode.push(Blockly.Yail.YAIL_CLOSE_BLOCK);
+  return replCode;
+}
+
+
+Blockly.Yail.wrapTaskForRepl = function(taskName, code, componentNames) {
+  var replCode = [];
+  replCode.push(Blockly.Yail.YAIL_BEGIN);
+  replCode.push(Blockly.Yail.YAIL_CLEAR_TASK + taskName + Blockly.Yail.YAIL_CLOSE_BLOCK);
+  Blockly.Yail.contextName = taskName;
+  replCode = replCode.concat(code);
+  replCode.push(Blockly.Yail.getComponentInitializationString(taskName, componentNames));
   replCode.push(Blockly.Yail.YAIL_CLOSE_BLOCK);
   return replCode;
 }

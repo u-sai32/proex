@@ -12,7 +12,7 @@ import static com.google.appinventor.client.Ode.MESSAGES;
 public class YoungAndroidTaskTypeChoicePropertyEditor extends ChoicePropertyEditor {
 
   // Button shape choices
-  private static final Choice[] shapes = new Choice[] {
+  private static final Choice[] types = new Choice[] {
       new Choice(MESSAGES.quickTaskType(), "0"),
       new Choice(MESSAGES.longTaskType(), "1"),
       new Choice(MESSAGES.repeatingTaskType(), "2")
@@ -21,9 +21,8 @@ public class YoungAndroidTaskTypeChoicePropertyEditor extends ChoicePropertyEdit
   /**
    * Creates a new instance of the property editor.
    *
-   * @param choices array of values to choose from
    */
-  public YoungAndroidTaskTypeChoicePropertyEditor(Choice[] choices) {
-    super(choices);
+  public YoungAndroidTaskTypeChoicePropertyEditor() {
+    super(types);
   }
 }
