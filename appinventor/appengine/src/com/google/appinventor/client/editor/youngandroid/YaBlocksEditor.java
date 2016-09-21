@@ -613,6 +613,10 @@ public final class YaBlocksEditor extends FileEditor
     }
   }
 
+  public static YaBlocksEditor getYaBlocksEditor(String contextName) {
+    return contextToBlocksEditor.get(contextName);
+  }
+
   /*
    * Switch language to the specified language if applicable
    */

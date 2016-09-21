@@ -242,6 +242,22 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     backpack = bp_contents;
   }
 
+  public static boolean isFormBlockly(String contextName) {
+    YaBlocksEditor yaBlocksEditor = YaBlocksEditor.getYaBlocksEditor(contextName);
+    if (yaBlocksEditor != null && yaBlocksEditor.isFormBlocksEditor()) {
+      return true;
+    }
+    return false;
+  }
+
+  public static boolean isTaskBlockly(String contextName) {
+    YaBlocksEditor yaBlocksEditor = YaBlocksEditor.getYaBlocksEditor(contextName);
+    if (yaBlocksEditor != null && yaBlocksEditor.isTaskBlocksEditor()) {
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Add a component to the blocks workspace
    *
@@ -908,6 +924,10 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
       $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::getBackpack());
     $wnd.BlocklyPanel_setBackpack =
       $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::setBackpack(Ljava/lang/String;));
+    $wnd.BlocklyPanel_isFormBlockly =
+      $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::isFormBlockly(Ljava/lang/String;));
+    $wnd.BlocklyPanel_isTaskBlockly =
+      $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::isTaskBlockly(Ljava/lang/String;));
   }-*/;
 
   private native void initJS() /*-{

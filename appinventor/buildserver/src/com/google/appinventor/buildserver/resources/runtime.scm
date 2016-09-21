@@ -2935,7 +2935,7 @@ list, use the make-yail-list constructor with no arguments.
 ;;; the phone's UI thread. The result is then enqueued to be returned
 ;;; to the phone via the "send-to-block" function.
 
-(define-syntax process-repl-input
+(define-syntax process-repl-form-input
   (syntax-rules ()
     ((_ blockid expr)
      (begin (android-log (format #f "Out UI Thread : ~A" (java.lang.Thread:currentThread)))

@@ -85,8 +85,9 @@ Blockly.ReplMgr.buildYail = function() {
         return;                 // Nothing we can do without these
     if (!phoneState.initialized) {
         phoneState.initialized = true;
-        phoneState.blockYail = {};
-        phoneState.componentYail = "";
+        phoneState.formBlocksYail = {};
+        phoneState.formComponentYail = "";
+        phoneState.tasks = {};
     }
 
     var propertyNameConverter;
@@ -107,6 +108,11 @@ Blockly.ReplMgr.buildYail = function() {
         formProperties = jsonObject.Properties;
         formName = formProperties.$Name;
     }
+
+    for (var blockly in window.parent.Blocklies) {
+        if (blockly)
+    }
+
     var componentMap = Blockly.Component.buildComponentMap([], [], false, false);
     var componentNames = [];
     for (var comp in componentMap.components)
@@ -262,7 +268,7 @@ Blockly.ReplMgr.putYail = (function() {
                 'code' : Blockly.ReplMgr.quoteUnicode(code), // Deal with unicode characters and kawa
                 'success' : success,
                 'failure' : failure,
-                'block' : block
+                'block' : block,
             });
             if (!rs.phoneState.ioRunning) {
                 rs.phoneState.ioRunning = true;
@@ -363,8 +369,8 @@ Blockly.ReplMgr.putYail = (function() {
             };
             encoder.add('mac', Blockly.ReplMgr.hmac(work.code + rs.seq_count + blockid));
             encoder.add('seq', rs.seq_count);
-            encoder.add('code', work.code);
-            encoder.add('blockid', blockid);
+            encoder.add('form_code', work.code);
+            encoder.add('form_blockid', blockid);
             var stuff = encoder.toString();
             conn.send(stuff);
         },

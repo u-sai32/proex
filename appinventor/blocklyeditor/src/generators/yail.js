@@ -165,7 +165,7 @@ Blockly.Yail.getFormYail = function(formJson, packageName, forRepl) {
     code.push(Blockly.Yail.YAIL_INIT_RUNTIME);
   
     if (forRepl) {
-      code = Blockly.Yail.wrapForRepl(formName, code, componentNames);
+      code = Blockly.Yail.wrapFormForRepl(formName, code, componentNames);
     }
 
     // TODO?: get rid of empty property assignments? I'm not convinced this is necessary.
@@ -243,7 +243,7 @@ Blockly.Yail.getTaskYail = function(formJson, packageName, forRepl) {
     code.push(Blockly.Yail.YAIL_INIT_RUNTIME);
 
     if (forRepl) {
-      code = Blockly.Yail.wrapForRepl(taskName, code, componentNames);
+      code = Blockly.Yail.wrapTaskForRepl(taskName, code, componentNames);
     }
 
     // TODO?: get rid of empty property assignments? I'm not convinced this is necessary.
