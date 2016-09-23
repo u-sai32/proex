@@ -71,7 +71,7 @@ Blockly.ReplStateObj.prototype = {
 
 // Blockly.mainWorkSpace --- hold the main workspace
 
-Blockly.ReplMgr.buildYail = function() {
+Blockly.ReplMgr.buildYail = function(stag) {
     var phoneState;
     var code = [];
     var blocks;
@@ -102,33 +102,41 @@ Blockly.ReplMgr.buildYail = function() {
         };
     }
     var jsonObject = JSON.parse(phoneState.formJson);
-    var formProperties;
-    var formName;
+    var contextProperties;
+    var contextName;
     if (jsonObject.Properties) {
-        formProperties = jsonObject.Properties;
-        formName = formProperties.$Name;
+        contextProperties = jsonObject.Properties;
+        contextName = formProperties.$Name;
     }
 
-    for (var blockly in window.parent.Blocklies) {
-        if (blockly)
+    if (!stag) {
+        for (var blockly in window.parent.Blocklies) {
+            if (window.parent.BlocklyPanel_isTaskBlockly(blockly.BlocklyEditor.formName)) {
+                // Do Task Repl Build
+                blockly.ReplMgr.buildYail(true);
+            }
+        }
     }
 
     var componentMap = Blockly.Component.buildComponentMap([], [], false, false);
     var componentNames = [];
     for (var comp in componentMap.components)
         componentNames.push(comp);
-    if (formProperties) {
-        if (formName != 'Screen1')
-            code.push(Blockly.Yail.getComponentRenameString("Screen1", formName));
+    if (contextProperties) {
         var sourceType = jsonObject.Source;
         if (sourceType == "Form") {
-            code = code.concat(Blockly.Yail.getComponentLines(formName, formProperties, null /*parent*/, componentMap, true /* forRepl */, propertyNameConverter));
+            if (contextName != 'Screen1')
+                code.push(Blockly.Yail.getComponentRenameString("Screen1", contextName));
+            code = code.concat(Blockly.Yail.getComponentLines(contextName, contextProperties, null /*parent*/, componentMap, true /* forRepl */, propertyNameConverter));
+        }  else if (sourceType == "Task") {
+            code = code.concat(Blockly.Yail.getComponentLines(contextName, contextProperties, null /*parent*/, componentMap, true /* forRepl */, propertyNameConverter));
+
         } else {
             throw "Source type " + sourceType + " is invalid.";
         }
 
         // Fetch all of the components in the form, this may result in duplicates
-        componentNames = Blockly.Yail.getDeepNames(formProperties, componentNames);
+        componentNames = Blockly.Yail.getDeepNames(contextProperties, componentNames);
         // Remove the duplicates
         var uniqueNames = componentNames.filter(function(elem, pos) {
             return componentNames.indexOf(elem) == pos;});
@@ -136,17 +144,30 @@ Blockly.ReplMgr.buildYail = function() {
 
         code = code.join('\n');
 
-        if (phoneState.componentYail != code) {
-            // We need to send all of the component cruft (sorry)
-            needinitialize = true;
-            phoneState.blockYail = {}; // Sorry, have to send the blocks again.
-            this.putYail(Blockly.Yail.YAIL_CLEAR_FORM);
-            // Tell the Companion the current form name
-            this.putYail(Blockly.Yail.YAIL_SET_FORM_NAME_BEGIN + formName + Blockly.Yail.YAIL_SET_FORM_NAME_END);
-            this.putYail(code);
-            this.putYail(Blockly.Yail.YAIL_INIT_RUNTIME);
-            phoneState.componentYail = code;
+        if (sourceType == "Form") {
+            if (phoneState.formComponentYail != code) {
+                // We need to send all of the component cruft (sorry)
+                needinitialize = true;
+                phoneState.formBlocksYail = {}; // Sorry, have to send the blocks again.
+                this.putYail(Blockly.Yail.YAIL_CLEAR_FORM);
+                // Tell the Companion the current form name
+                this.putYail(Blockly.Yail.YAIL_SET_FORM_NAME_BEGIN + contextName + Blockly.Yail.YAIL_SET_FORM_NAME_END);
+                this.putYail(code);
+                this.putYail(Blockly.Yail.YAIL_INIT_RUNTIME);
+                phoneState.formComponentYail = code;
+            }
+        } else if (sourceType == "Task") {
+            if (!phoneState.tasks[contextName] || phoneState.tasks[contextName].componentYail != code) {
+                // We need to send all of the component cruft (sorry)
+                needinitialize = true;
+                phoneState.tasks[contextName].blocksYail = {}; // Sorry, have to send the blocks again.
+                this.putYail(Blockly.Yail.YAIL_CLEAR_TASK);
+                // Tell the Companion the current form name
+                this.putYail(code);
+                phoneState.tasks[contextName].componentYail = code;
+            }
         }
+
     }
 
     blocks = Blockly.mainWorkspace.getTopBlocks(true);
@@ -173,15 +194,24 @@ Blockly.ReplMgr.buildYail = function() {
             block.type != "procedures_defreturn")
             continue;
         var tempyail = Blockly.Yail.blockToCode(block);
-        if (phoneState.blockYail[block.id] != tempyail) { // Only send changed yail
-            this.putYail(tempyail, block, success, failure);
-            phoneState.blockYail[block.id] = tempyail;
+        if (sourceType == "Form") {
+            if (phoneState.blockYail[block.id] != tempyail) { // Only send changed yail
+                this.putYail(tempyail, block, success, failure);
+                phoneState.formBlockYail[block.id] = tempyail;
+            }
+
+        } else if (sourceType == "Task") {
+            if (!phoneState.tasks[contextName] || phoneState.tasks[contextName].blockYail)
         }
+
     }
 
     // need to do this after the blocks have been defined
     if (needinitialize) {
-        this.putYail(Blockly.Yail.getComponentInitializationString(formName, componentNames));
+        if (sourceType == "Form") {
+            this.putYail(Blockly.Yail.getComponentInitializationString(contextName, componentNames));
+        }
+
     }
 };
 
@@ -250,7 +280,7 @@ Blockly.ReplMgr.putYail = (function() {
     var phonereceiving = false;
     var engine = {
         // Enqueue form for the phone
-        'putYail' : function(code, block, success, failure) {
+        'putYail' : function(code, block, success, failure, context) {
             rs = window.parent.ReplState;
             context = this;
             if (rs === undefined || rs === null) {
@@ -269,6 +299,7 @@ Blockly.ReplMgr.putYail = (function() {
                 'success' : success,
                 'failure' : failure,
                 'block' : block,
+                'context' : context
             });
             if (!rs.phoneState.ioRunning) {
                 rs.phoneState.ioRunning = true;
@@ -283,13 +314,16 @@ Blockly.ReplMgr.putYail = (function() {
             if (!phonereceiving) {
                 engine.receivefromphone();
             }
-            var work;
+            var formWork;
+            var taskWork;
             if (top.loadAll) {
                 var chunk;
                 var allcode = "";
+                var taskcode = "";
                 var first = true;
                 var chunked = false;
                 var lastblock;
+                var lastTaskBlock;
                 while ((chunk = rs.phoneState.phoneQueue.shift())) {
                     if (first) {
                         first = false;
@@ -297,28 +331,42 @@ Blockly.ReplMgr.putYail = (function() {
                         console.log("We did chunk!");
                         chunked = true;
                     }
-                    allcode += chunk.code; // We can concatonate because AppInvHTTPD runs us
-                                           // in a (begin) block
-                    lastblock = chunk.block;
+                    if (chunk.context == "form") {
+                        allcode += chunk.code; // We can concatonate because AppInvHTTPD runs us
+                                               // in a (begin) block
+                        lastblock = chunk.block;
+                    } else if (chunk.context == "task") {
+                        taskcode += chunk.code;
+                        lastTaskBlock = chunk.block;
+
+                    }
+
                 }
                 if (first) {               // There was no work to do
                     rs.phoneState.ioRunning = false;
                     return;
                 }
-                work = { 'code' : allcode,
+                formWork = { 'code' : allcode,
                          'block' : null,   // We cannot link this large code block
                                            // to any particular block (yet)
                          'chunking' : true // indicate we are chunking...
                        };
+                taskWork = { 'code' : taskcode,
+                             'block' : null,
+                             'chunking' : true
+                             };
                 if (chunked) {
-                    console.log("Chunk: " + allcode);
+                    console.log("Screen Chunk: " + allcode);
+                    console.log("Task Chunk: " + taskcode);
                 } else {
-                    console.log("Slow Path: " + allcode);
-                    work.block = lastblock; // Only one block, so we can provide it
+                    console.log("Screen Slow Path: " + allcode);
+                    console.log("Task Slow Path: " + taskcode);
+                    formWork.block = lastblock; // Only one block, so we can provide it
+                    taskWork.block = lastTaskBlock;
                 }
             } else {
-                work = rs.phoneState.phoneQueue.shift();
-                if (!work) {
+                formWork = rs.phoneState.phoneQueue.shift();
+                if (!formWork) {
                     rs.phoneState.ioRunning = false;
                     return;
                 }
@@ -333,6 +381,16 @@ Blockly.ReplMgr.putYail = (function() {
                     blockid = "-2";
                 } else {
                     blockid = "-1";
+                }
+            }
+            var taskblockid;
+            if (taskWork.block) {
+                taskblockid = taskWork.block.id;
+            } else {
+                if (taskWork.chunking) { // Used to indicate an error in when chunking
+                    taskblockid = "-2";
+                } else {
+                    taskblockid = "-1";
                 }
             }
 
@@ -371,6 +429,8 @@ Blockly.ReplMgr.putYail = (function() {
             encoder.add('seq', rs.seq_count);
             encoder.add('form_code', work.code);
             encoder.add('form_blockid', blockid);
+            encoder.add('task_code', taskWork.code);
+            encoder.add('task_blockid', taskblockid);
             var stuff = encoder.toString();
             conn.send(stuff);
         },
