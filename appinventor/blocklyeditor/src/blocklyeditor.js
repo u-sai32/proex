@@ -47,6 +47,7 @@ Blockly.BlocklyEditor.startup = function(documentBody, formName) {
     Blockly.TypeBlock(Blockly.configForTypeBlock);
 
   Blockly.BlocklyEditor.formName = formName;
+  Blockly.BlocklyEditor.simpleContextName = formName.substr(formName.indexOf("_") + 1);
 
   /* [Added by paulmw in patch 15]
   There are three ways that you can change how lexical variables

@@ -83,6 +83,7 @@ Blockly.ReplMgr.buildYail = function(stag) {
     phoneState = window.parent.ReplState.phoneState;
     if (!phoneState.formJson || !phoneState.packageName)
         return;                 // Nothing we can do without these
+
     if (!phoneState.initialized) {
         phoneState.initialized = true;
         phoneState.formBlocksYail = {};
@@ -107,6 +108,10 @@ Blockly.ReplMgr.buildYail = function(stag) {
     if (jsonObject.Properties) {
         contextProperties = jsonObject.Properties;
         contextName = formProperties.$Name;
+    }
+
+    if (this.BlocklyEditor.simpleContextName != contextName && !phoneState.tasks[this.BlocklyEditor.simpleContextName]) {
+        return;
     }
 
     if (!stag) {
@@ -160,7 +165,7 @@ Blockly.ReplMgr.buildYail = function(stag) {
             if (!phoneState.tasks[contextName] || phoneState.tasks[contextName].componentYail != code) {
                 // We need to send all of the component cruft (sorry)
                 needinitialize = true;
-                phoneState.tasks[contextName].blocksYail = {}; // Sorry, have to send the blocks again.
+                phoneState.tasks[contextName].blockYail = {}; // Sorry, have to send the blocks again.
                 this.putYail(Blockly.Yail.YAIL_CLEAR_TASK);
                 // Tell the Companion the current form name
                 this.putYail(code);
@@ -195,13 +200,16 @@ Blockly.ReplMgr.buildYail = function(stag) {
             continue;
         var tempyail = Blockly.Yail.blockToCode(block);
         if (sourceType == "Form") {
-            if (phoneState.blockYail[block.id] != tempyail) { // Only send changed yail
+            if (phoneState.formBlockYail[block.id] != tempyail) { // Only send changed yail
                 this.putYail(tempyail, block, success, failure);
                 phoneState.formBlockYail[block.id] = tempyail;
             }
 
         } else if (sourceType == "Task") {
-            if (!phoneState.tasks[contextName] || phoneState.tasks[contextName].blockYail)
+            if (!phoneState.tasks[contextName] || phoneState.tasks[contextName].blockYail[block.id] != tempyail) {
+                this.putYail(tempyail, block, success, failure);
+                phoneState.tasks[contextName].blockYail[block.id] = tempyail;
+            }
         }
 
     }
@@ -227,6 +235,15 @@ Blockly.ReplMgr.sendFormData = function(formJson, packageName) {
         clearTimeout(this.polltimer);
     }
     this.polltimer = setTimeout(poller, 500);
+};
+
+Blockly.ReplMgr.sendTaskData = function(taskJson, packageName) {
+    var phoneState = window.parent.ReplState.phoneState;
+    if (!phoneState.tasks) {
+        phoneState.tasks = {};
+    }
+    phoneState.tasks[this.BlocklyEditor.simpleContextName] = { 'taskJson' : taskJson};
+
 };
 
 Blockly.ReplMgr.RefreshAssets = null;
@@ -280,7 +297,7 @@ Blockly.ReplMgr.putYail = (function() {
     var phonereceiving = false;
     var engine = {
         // Enqueue form for the phone
-        'putYail' : function(code, block, success, failure, context) {
+        'putYail' : function(contextType, code, block, success, failure) {
             rs = window.parent.ReplState;
             context = this;
             if (rs === undefined || rs === null) {
@@ -299,7 +316,7 @@ Blockly.ReplMgr.putYail = (function() {
                 'success' : success,
                 'failure' : failure,
                 'block' : block,
-                'context' : context
+                'contextType' : contextType
             });
             if (!rs.phoneState.ioRunning) {
                 rs.phoneState.ioRunning = true;
@@ -331,11 +348,11 @@ Blockly.ReplMgr.putYail = (function() {
                         console.log("We did chunk!");
                         chunked = true;
                     }
-                    if (chunk.context == "form") {
+                    if (chunk.contextType == "form") {
                         allcode += chunk.code; // We can concatonate because AppInvHTTPD runs us
                                                // in a (begin) block
                         lastblock = chunk.block;
-                    } else if (chunk.context == "task") {
+                    } else if (chunk.contextType == "task") {
                         taskcode += chunk.code;
                         lastTaskBlock = chunk.block;
 
