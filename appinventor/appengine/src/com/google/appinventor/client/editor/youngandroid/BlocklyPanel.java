@@ -618,7 +618,12 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
       throw new YailGenerationException("Blocks area is not initialized yet", formName);
     }
     try {
-      doSendJson(formName, formJson, packageName);
+      if (myBlocksEditor.isFormBlocksEditor()) {
+        doSendFormJson(formName, formJson, packageName);
+      } else if (myBlocksEditor.isTaskBlocksEditor()) {
+        doSendTaskJson(formName, formJson, packageName);
+      }
+
     } catch (JavaScriptException e) {
       throw new YailGenerationException(e.getDescription(), formName);
     }
@@ -1006,7 +1011,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   }-*/;
 
   public static native void doSendTaskJson(String formName, String formJson, String packageName) /*-{
-    $wnd.Blocklies[formName].ReplMgr.sendFormData(formJson, packageName);
+    $wnd.Blocklies[formName].ReplMgr.sendTaskData(formJson, packageName);
   }-*/;
 
   public static native void doResetYail(String formName) /*-{

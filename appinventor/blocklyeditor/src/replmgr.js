@@ -107,19 +107,24 @@ Blockly.ReplMgr.buildYail = function(stag) {
     var contextName;
     if (jsonObject.Properties) {
         contextProperties = jsonObject.Properties;
-        contextName = formProperties.$Name;
+        contextName = contextProperties.$Name;
     }
 
-    if (this.BlocklyEditor.simpleContextName != contextName && !phoneState.tasks[this.BlocklyEditor.simpleContextName]) {
+    if (Blockly.BlocklyEditor.simpleContextName != contextName && !phoneState.tasks[Blockly.BlocklyEditor.simpleContextName]) {
         return;
+    }
+
+    if (phoneState.tasks[Blockly.BlocklyEditor.simpleContextName] && phoneState.tasks[Blockly.BlocklyEditor.simpleContextName].packageName != phoneState.packageName) {
+        phoneState.tasks[Blockly.BlocklyEditor.simpleContextName] = null;
     }
 
     if (!stag) {
         for (var blockly in window.parent.Blocklies) {
-            if (window.parent.BlocklyPanel_isTaskBlockly(blockly.BlocklyEditor.formName)) {
-                // Do Task Repl Build
-                blockly.ReplMgr.buildYail(true);
-            }
+                console.log(blockly);
+//                if (window.parent.BlocklyPanel_isTaskBlockly(blockly.BlocklyEditor.formName)) {
+//                // Do Task Repl Build
+//                blockly.ReplMgr.buildYail(true);
+//            }
         }
     }
 
@@ -154,11 +159,11 @@ Blockly.ReplMgr.buildYail = function(stag) {
                 // We need to send all of the component cruft (sorry)
                 needinitialize = true;
                 phoneState.formBlocksYail = {}; // Sorry, have to send the blocks again.
-                this.putYail(Blockly.Yail.YAIL_CLEAR_FORM);
+                this.putYail("form", Blockly.Yail.YAIL_CLEAR_FORM);
                 // Tell the Companion the current form name
-                this.putYail(Blockly.Yail.YAIL_SET_FORM_NAME_BEGIN + contextName + Blockly.Yail.YAIL_SET_FORM_NAME_END);
-                this.putYail(code);
-                this.putYail(Blockly.Yail.YAIL_INIT_RUNTIME);
+                this.putYail("form", Blockly.Yail.YAIL_SET_FORM_NAME_BEGIN + contextName + Blockly.Yail.YAIL_SET_FORM_NAME_END);
+                this.putYail("form", code);
+                this.putYail("form", Blockly.Yail.YAIL_INIT_RUNTIME);
                 phoneState.formComponentYail = code;
             }
         } else if (sourceType == "Task") {
@@ -166,9 +171,9 @@ Blockly.ReplMgr.buildYail = function(stag) {
                 // We need to send all of the component cruft (sorry)
                 needinitialize = true;
                 phoneState.tasks[contextName].blockYail = {}; // Sorry, have to send the blocks again.
-                this.putYail(Blockly.Yail.YAIL_CLEAR_TASK);
+                this.putYail("task", Blockly.Yail.YAIL_CLEAR_TASK);
                 // Tell the Companion the current form name
-                this.putYail(code);
+                this.putYail("task", code);
                 phoneState.tasks[contextName].componentYail = code;
             }
         }
@@ -201,13 +206,13 @@ Blockly.ReplMgr.buildYail = function(stag) {
         var tempyail = Blockly.Yail.blockToCode(block);
         if (sourceType == "Form") {
             if (phoneState.formBlockYail[block.id] != tempyail) { // Only send changed yail
-                this.putYail(tempyail, block, success, failure);
+                this.putYail("form", tempyail, block, success, failure);
                 phoneState.formBlockYail[block.id] = tempyail;
             }
 
         } else if (sourceType == "Task") {
             if (!phoneState.tasks[contextName] || phoneState.tasks[contextName].blockYail[block.id] != tempyail) {
-                this.putYail(tempyail, block, success, failure);
+                this.putYail("task", tempyail, block, success, failure);
                 phoneState.tasks[contextName].blockYail[block.id] = tempyail;
             }
         }
@@ -217,7 +222,7 @@ Blockly.ReplMgr.buildYail = function(stag) {
     // need to do this after the blocks have been defined
     if (needinitialize) {
         if (sourceType == "Form") {
-            this.putYail(Blockly.Yail.getComponentInitializationString(contextName, componentNames));
+            this.putYail("form", Blockly.Yail.getComponentInitializationString(contextName, componentNames));
         }
 
     }
@@ -242,7 +247,7 @@ Blockly.ReplMgr.sendTaskData = function(taskJson, packageName) {
     if (!phoneState.tasks) {
         phoneState.tasks = {};
     }
-    phoneState.tasks[this.BlocklyEditor.simpleContextName] = { 'taskJson' : taskJson};
+    phoneState.tasks[this.BlocklyEditor.simpleContextName] = {'taskJson' : taskJson, 'packageName' : packageName};
 
 };
 
@@ -383,6 +388,7 @@ Blockly.ReplMgr.putYail = (function() {
                 }
             } else {
                 formWork = rs.phoneState.phoneQueue.shift();
+                taskWork = formWork;
                 if (!formWork) {
                     rs.phoneState.ioRunning = false;
                     return;
@@ -391,20 +397,20 @@ Blockly.ReplMgr.putYail = (function() {
             var encoder = new goog.Uri.QueryData();
             conn = goog.net.XmlHttp();
             var blockid;
-            if (work.block) {
-                blockid = work.block.id;
+            if (formWork && formWork.block) {
+                blockid = formWork.block.id;
             } else {
-                if (work.chunking) { // Used to indicate an error in when chunking
+                if (formWork && formWork.chunking) { // Used to indicate an error in when chunking
                     blockid = "-2";
                 } else {
                     blockid = "-1";
                 }
             }
             var taskblockid;
-            if (taskWork.block) {
+            if (taskWork && taskWork.block) {
                 taskblockid = taskWork.block.id;
             } else {
-                if (taskWork.chunking) { // Used to indicate an error in when chunking
+                if (taskWork && taskWork.chunking) { // Used to indicate an error in when chunking
                     taskblockid = "-2";
                 } else {
                     taskblockid = "-1";
@@ -416,11 +422,11 @@ Blockly.ReplMgr.putYail = (function() {
                 if (this.readyState == 4 && this.status == 200) {
                     var json = goog.json.parse(this.response);
                     if (json.status != 'OK') {
-                        if (work.failure)
-                            work.failure(Blockly.Msg.REPL_ERROR_FROM_COMPANION);
+                        if (formWork.failure)
+                            formWork.failure(Blockly.Msg.REPL_ERROR_FROM_COMPANION);
                     } else {
-                        if (work.success)
-                            work.success();
+                        if (formWork.success)
+                            formWork.success();
                     }
                     context.processRetvals(json.values);
                     rs.seq_count += 1;
@@ -429,8 +435,8 @@ Blockly.ReplMgr.putYail = (function() {
                 } else {
                     if (this.readyState == 4) {
                         console.log("putYail(poller): status = " + this.status);
-                        if (work.failure) {
-                            work.failure(Blockly.Msg.REPL_NETWORK_CONNECTION_ERROR);
+                        if (formWork.failure) {
+                            formWork.failure(Blockly.Msg.REPL_NETWORK_CONNECTION_ERROR);
                         }
                         var dialog = new Blockly.Util.Dialog(Blockly.Msg.REPL_NETWORK_ERROR, Blockly.Msg.REPL_NETWORK_ERROR_RESTART, Blockly.Msg.REPL_OK, null, 0,
                             function() {
@@ -442,9 +448,9 @@ Blockly.ReplMgr.putYail = (function() {
                 }
 
             };
-            encoder.add('mac', Blockly.ReplMgr.hmac(work.code + rs.seq_count + blockid));
+            encoder.add('mac', Blockly.ReplMgr.hmac(formWork.code + rs.seq_count + blockid));
             encoder.add('seq', rs.seq_count);
-            encoder.add('form_code', work.code);
+            encoder.add('form_code', formWork.code);
             encoder.add('form_blockid', blockid);
             encoder.add('task_code', taskWork.code);
             encoder.add('task_blockid', taskblockid);

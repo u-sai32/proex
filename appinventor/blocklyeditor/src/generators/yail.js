@@ -42,7 +42,7 @@ Blockly.Yail.YAIL_CALL_COMPONENT_METHOD = "(call-component-method ";
 Blockly.Yail.YAIL_CALL_COMPONENT_TYPE_METHOD = "(call-component-type-method ";
 Blockly.Yail.YAIL_CALL_YAIL_PRIMITIVE = "(call-yail-primitive ";
 Blockly.Yail.YAIL_CLEAR_FORM = "(clear-current-form)";
-Blockly.Yail.YAIL_CLEAR_FORM = "(clear-task ";
+Blockly.Yail.YAIL_CLEAR_TASK = "(clear-task ";
 // The lines below are complicated because we want to support versions of the
 // Companion older then 2.20ai2 which do not have set-form-name defined
 Blockly.Yail.YAIL_SET_FORM_NAME_BEGIN = "(try-catch (let ((attempt (delay (set-form-name \"";
