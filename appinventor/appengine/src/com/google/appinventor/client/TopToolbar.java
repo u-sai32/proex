@@ -885,7 +885,7 @@ public class TopToolbar extends Composite {
             + "Ignoring attempt to start the repl.");
       return;
     }
-    DesignToolbar.Context screen = currentProject.screens.get(currentProject.currentContext);
+    DesignToolbar.Context screen = currentProject.getContext(currentProject.currentContext);
     screen.blocksEditor.startRepl(!start, forEmulator, forUsb);
     if (start) {
       if (forEmulator) {        // We are starting the emulator...
