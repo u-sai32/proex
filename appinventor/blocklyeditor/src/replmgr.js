@@ -120,11 +120,11 @@ Blockly.ReplMgr.buildYail = function(stag) {
 
     if (!stag) {
         for (var blockly in window.parent.Blocklies) {
-                console.log(blockly);
+                console.log("data sendinnnnnn... " + blockly);
 //                if (window.parent.BlocklyPanel_isTaskBlockly(blockly.BlocklyEditor.formName)) {
-//                // Do Task Repl Build
-//                blockly.ReplMgr.buildYail(true);
-//            }
+                // Do Task Repl Build
+                //blockly.ReplMgr.buildYail(true);
+           // }
         }
     }
 
@@ -205,9 +205,9 @@ Blockly.ReplMgr.buildYail = function(stag) {
             continue;
         var tempyail = Blockly.Yail.blockToCode(block);
         if (sourceType == "Form") {
-            if (phoneState.formBlockYail[block.id] != tempyail) { // Only send changed yail
+            if (!phoneState.formBlocksYail || phoneState.formBlocksYail[block.id] != tempyail) { // Only send changed yail
                 this.putYail("form", tempyail, block, success, failure);
-                phoneState.formBlockYail[block.id] = tempyail;
+                phoneState.formBlocksYail[block.id] = tempyail;
             }
 
         } else if (sourceType == "Task") {
@@ -223,6 +223,8 @@ Blockly.ReplMgr.buildYail = function(stag) {
     if (needinitialize) {
         if (sourceType == "Form") {
             this.putYail("form", Blockly.Yail.getComponentInitializationString(contextName, componentNames));
+        } else if (sourceType == "Task") {
+            this.putYail("task", Blockly.Yail.getComponentInitializationString(contextName, componentNames));
         }
 
     }
@@ -452,8 +454,9 @@ Blockly.ReplMgr.putYail = (function() {
             encoder.add('seq', rs.seq_count);
             encoder.add('form_code', formWork.code);
             encoder.add('form_blockid', blockid);
-            encoder.add('task_code', taskWork.code);
-            encoder.add('task_blockid', taskblockid);
+            encoder.add('task_count', "1");
+            encoder.add('task0_code', taskWork.code);
+            encoder.add('task0_blockid', taskblockid);
             var stuff = encoder.toString();
             conn.send(stuff);
         },
