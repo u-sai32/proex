@@ -7,9 +7,8 @@
 
 package com.google.appinventor.components.runtime.util;
 import com.google.appinventor.components.runtime.ReplForm;
-import java.util.Enumeration;
-import java.util.Formatter;
-import java.util.Properties;
+
+import java.util.*;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -20,6 +19,10 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -121,12 +124,9 @@ public class AppInvHTTPD extends NanoHTTPD {
     if (uri.equals("/_newblocks")) { // Handle AJAX calls from the newblocks code
       String inSeq = parms.getProperty("seq", "0");
       int iseq = Integer.parseInt(inSeq);
-      String form_blockid = parms.getProperty("form_blockid");
-      String form_code = parms.getProperty("form_code");
-      String task_count = parms.getProperty("task_count", "0");
+      String repl_input = parms.getProperty("repl_input");
       String inMac = parms.getProperty("mac", "no key provided");
       String compMac = "";
-      String input_code = form_code;
       if (hmacKey != null) {
         try {
           Mac hmacSha1 = Mac.getInstance("HmacSHA1");
@@ -177,15 +177,30 @@ public class AppInvHTTPD extends NanoHTTPD {
         Response res = new Response(HTTP_OK, MIME_JSON, "{\"status\" : \"BAD\", \"message\" : \"Security Error: No HMAC Key\"}");
         return(res);
       }
-
-      int taskCount = Integer.parseInt(task_count);
-      String taskCodes[] = new String[taskCount];
-      String taskBlockIds[] = new String[taskCount];
-      for (int i = 0; i < taskCount; ++i) {
-        taskCodes[i] = parms.getProperty("task" + i + "_code");
-        taskBlockIds[i] = parms.getProperty("task" + i + "_blockid");
+      String formCode = "#f";
+      String formBlockId = "-2";
+      int taskCount = 0;
+      Map<String, String> taskCodes = new HashMap<String, String>();
+      Map<String, String> taskBlockIds = new HashMap<String, String>();
+      try {
+        JSONObject replInput = new JSONObject(repl_input);
+        JSONObject formInput = replInput.getJSONObject("form");
+        formCode = formInput.getString("code");
+        formBlockId = formInput.getString("block_id");
+        JSONArray tasks = formInput.getJSONArray("tasks");
+        taskCount = tasks.length();
+        for (int i = 0; i < tasks.length(); ++i) {
+          JSONObject task = tasks.getJSONObject(i);
+          if (task.getString("code").equals("#f")) {
+            continue; // skip evaluation of "#f"
+          }
+          taskCodes.put(task.getString("name"), task.getString("code"));
+          taskBlockIds.put(task.getString("name"), task.getString("block_id"));
+        }
+      } catch (JSONException e) {
+        e.printStackTrace();
       }
-
+      String input_code = formCode;
       for (int i = 0; i < taskCount; ++i) {
         taskCodes[i] = "(begin (require <com.google.youngandroid.runtime>) (process-repl-task-input " + taskBlockIds[i] +
                 " (begin " + taskCodes[i] + " )))";
