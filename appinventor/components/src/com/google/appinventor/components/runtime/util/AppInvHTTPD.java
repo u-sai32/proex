@@ -132,7 +132,7 @@ public class AppInvHTTPD extends NanoHTTPD {
           Mac hmacSha1 = Mac.getInstance("HmacSHA1");
           SecretKeySpec key = new SecretKeySpec(hmacKey, "RAW");
           hmacSha1.init(key);
-          byte [] tmpMac = hmacSha1.doFinal((form_code + inSeq + form_blockid).getBytes());
+          byte [] tmpMac = hmacSha1.doFinal((repl_input + inSeq ).getBytes());
           StringBuffer sb = new StringBuffer(tmpMac.length * 2);
           Formatter formatter = new Formatter(sb);
           for (byte b : tmpMac)
@@ -149,7 +149,6 @@ public class AppInvHTTPD extends NanoHTTPD {
         Log.d(LOG_TAG, "Computed Mac = " + compMac);
         Log.d(LOG_TAG, "Incoming seq = " + inSeq);
         Log.d(LOG_TAG, "Computed seq = " + seq);
-        Log.d(LOG_TAG, "blockid = " + form_blockid);
         boolean _secure = false; // resecure this!
         if (!inMac.equals(compMac) && _secure) {
           Log.e(LOG_TAG, "Hmac does not match");
@@ -201,36 +200,36 @@ public class AppInvHTTPD extends NanoHTTPD {
         e.printStackTrace();
       }
       String input_code = formCode;
-      for (int i = 0; i < taskCount; ++i) {
-        taskCodes[i] = "(begin (require <com.google.youngandroid.runtime>) (process-repl-task-input " + taskBlockIds[i] +
-                " (begin " + taskCodes[i] + " )))";
-        Log.d(LOG_TAG, "To Eval Task" + i + ": " + taskCodes[i]);
+      for (String key :taskCodes.keySet()) {
+        taskCodes.put(key, "(begin (require <com.google.youngandroid.runtime>) (process-repl-task-input " + taskBlockIds.get(key) +
+                " (begin " + taskCodes.get(key) + " )))");
+        Log.d(LOG_TAG, "To Eval Task(" + key + "): " + taskCodes.get(key));
       }
 
-      form_code = "(begin (require <com.google.youngandroid.runtime>) (process-repl-form-input " + form_blockid + " (begin " +
-        form_code + " )))";
+      formCode = "(begin (require <com.google.youngandroid.runtime>) (process-repl-form-input " + formBlockId + " (begin " +
+        formCode + " )))";
 
-      Log.d(LOG_TAG, "To Eval: " + form_code);
+      Log.d(LOG_TAG, "To Eval: " + formCode);
 
       Response res;
       Log.d(LOG_TAG, "Eval Thread Name : " + Thread.currentThread());
       form.loadComponents();  // load all components before Eval
       try {
 
-        for (int i = 0; i < taskCount; ++i) {
-          scheme.eval(taskCodes[i]);
+        for (String code : taskCodes.values()) {
+          scheme.eval(code);
         }
 
         // Don't evaluate a simple "#f" which is used by the poller
         if (input_code.equals("#f")) {
           Log.e(LOG_TAG, "Skipping evaluation of #f");
         } else {
-          scheme.eval(form_code);
+          scheme.eval(formCode);
         }
         res = new Response(HTTP_OK, MIME_JSON, RetValManager.fetch(false));
       } catch (Throwable ex) {
         Log.e(LOG_TAG, "newblocks: Scheme Failure", ex);
-        RetValManager.appendReturnValue(form_blockid, "BAD", ex.toString());
+        RetValManager.appendReturnValue(formBlockId, "BAD", ex.toString());
         res = new Response(HTTP_OK, MIME_JSON, RetValManager.fetch(false));
       }
       res.addHeader("Access-Control-Allow-Origin", "*");

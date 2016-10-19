@@ -121,7 +121,7 @@ Blockly.ReplMgr.buildYail = function(stag) {
     if (!stag) {
         for (var blockly in window.parent.Blocklies) {
                 console.log("data sendinnnnnn... " + blockly);
-//                if (window.parent.BlocklyPanel_isTaskBlockly(blockly.BlocklyEditor.formName)) {
+//                if (window.parent.BlocklyPanel_isTaskBlockly(blockly.BlocklyEditor.fullContextName)) {
                 // Do Task Repl Build
                 //blockly.ReplMgr.buildYail(true);
            // }
@@ -272,7 +272,7 @@ Blockly.ReplMgr.pollYail = function() {
         }
     }
     if (window.parent.ReplState.state == this.rsState.CONNECTED) {
-        this.RefreshAssets(this.formName);
+        this.RefreshAssets(this.fullContextName);
     }
 };
 
@@ -443,7 +443,7 @@ Blockly.ReplMgr.putYail = (function() {
                         var dialog = new Blockly.Util.Dialog(Blockly.Msg.REPL_NETWORK_ERROR, Blockly.Msg.REPL_NETWORK_ERROR_RESTART, Blockly.Msg.REPL_OK, null, 0,
                             function() {
                                 dialog.hide();
-                                context.hardreset(context.formName);
+                                context.hardreset(context.fullContextName);
                             });
                         engine.resetcompanion();
                     }
@@ -551,7 +551,7 @@ Blockly.ReplMgr.putYail = (function() {
             context.resetYail(false);
 //   hardreset is now done in the handler for the network error dialog OK
 //   button.
-//          context.hardreset(context.formName); // kill adb and emulator
+//          context.hardreset(context.fullContextName); // kill adb and emulator
             rs.didversioncheck = false;
             window.parent.BlocklyPanel_indicateDisconnect();
         },
@@ -874,7 +874,7 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
                 top.ReplState.connection = null;
                 top.BlocklyPanel_indicateDisconnect();
                 context.resetYail(false);
-                context.hardreset(context.formName);
+                context.hardreset(context.fullContextName);
             } else {
                 ubercounter = 0;
                 counter = 10;
@@ -1009,7 +1009,7 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
             progdialog.hide();
             rs.state = context.rsState.CONNECTED; // Indicate that we are good to go!
             clearInterval(interval);
-            window.parent.BlocklyPanel_blocklyWorkspaceChanged(context.formName);
+            window.parent.BlocklyPanel_blocklyWorkspaceChanged(context.fullContextName);
         }
     };
     interval = setInterval(mainloop, 1000); // Once per second
@@ -1056,7 +1056,7 @@ Blockly.ReplMgr.startRepl = function(already, emulator, usb) {
             rs.seq_count = 1;
             rs.count = 0;
             this.rendPoll();
-            refreshAssets(this.formName);
+            refreshAssets(this.fullContextName);
             return;             // All done
         }
         rs = window.parent.ReplState;
@@ -1078,7 +1078,7 @@ Blockly.ReplMgr.startRepl = function(already, emulator, usb) {
         }
         this.resetYail(false);
         window.parent.ReplState.state = this.rsState.IDLE;
-        this.hardreset(this.formName);       // Tell aiStarter to kill off adb
+        this.hardreset(this.fullContextName);       // Tell aiStarter to kill off adb
     }
 };
 
@@ -1115,12 +1115,12 @@ Blockly.ReplMgr.getFromRendezvous = function() {
                 rs.baseurl = 'http://' + json.ipaddr + ':8001/';
                 rs.state = Blockly.ReplMgr.rsState.CONNECTING;
                 rs.dialog.hide();
-                refreshAssets(context.formName);    // Start assets loading
+                refreshAssets(context.fullContextName);    // Start assets loading
                 if (!checkAssetsTransfer()) {
                    throw "Assets not Transferred"; // throw error if assets transfer is incomplete
                 }
                 rs.state = Blockly.ReplMgr.rsState.CONNECTED;
-                window.parent.BlocklyPanel_blocklyWorkspaceChanged(context.formName);
+                window.parent.BlocklyPanel_blocklyWorkspaceChanged(context.fullContextName);
                 // Start the connection with the Repl itself
             } catch (err) {
                 console.log("getFromRendezvous(): Error: " + err);
@@ -1231,8 +1231,8 @@ Blockly.ReplMgr.putAsset = function(filename, blob, success, fail, force) {
     return true;
 };
 
-Blockly.ReplMgr.hardreset = function(formName, callback) {
-    window.parent.AssetManager_reset(formName); // Reset the notion of what assets
+Blockly.ReplMgr.hardreset = function(fullContextName, callback) {
+    window.parent.AssetManager_reset(fullContextName); // Reset the notion of what assets
                                                 // are loaded.
     var xhr = goog.net.XmlHttp();
     xhr.open("GET", "http://localhost:8004/reset/", true);
@@ -1250,12 +1250,12 @@ Blockly.ReplMgr.hardreset = function(formName, callback) {
 // run the reset-emulator script. This will reset things to their
 // "factory" defaults.
 
-Blockly.ReplMgr.ehardreset = function(formName) {
+Blockly.ReplMgr.ehardreset = function(fullContextName) {
     var context = this;
     var dialog = new Blockly.Util.Dialog(Blockly.Msg.REPL_DO_YOU_REALLY_Q, Blockly.Msg.REPL_FACTORY_RESET, Blockly.Msg.REPL_OK, Blockly.Msg.REPL_CANCEL, 0, function(response) {
         dialog.hide();
         if (response == "OK") {
-            context.hardreset(formName, function() {
+            context.hardreset(fullContextName, function() {
                 var xhr = goog.net.XmlHttp();
                 xhr.open("GET", "http://localhost:8004/emulatorreset/", true);
                 xhr.onreadystatchange = function() {}; // Ignore errors

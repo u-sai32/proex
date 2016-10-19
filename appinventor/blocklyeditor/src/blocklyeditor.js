@@ -46,8 +46,8 @@ Blockly.BlocklyEditor.startup = function(documentBody, formName) {
   if (!Blockly.readOnly)
     Blockly.TypeBlock(Blockly.configForTypeBlock);
 
-  Blockly.BlocklyEditor.formName = formName;
-  Blockly.BlocklyEditor.simpleContextName = formName.substr(formName.indexOf("_") + 1);
+  Blockly.BlocklyEditor.fullContextName = formName;
+  Blockly.BlocklyEditor.contextName = formName.substr(formName.indexOf("_") + 1);
 
   /* [Added by paulmw in patch 15]
   There are three ways that you can change how lexical variables
@@ -142,7 +142,7 @@ Blockly.BlocklyEditor.startup = function(documentBody, formName) {
   Blockly.bindEvent_(Blockly.mainWorkspace.getCanvas(), 'blocklyWorkspaceChange', this,
       function() {
         if (window.parent.BlocklyPanel_blocklyWorkspaceChanged){
-          window.parent.BlocklyPanel_blocklyWorkspaceChanged(Blockly.BlocklyEditor.formName);
+          window.parent.BlocklyPanel_blocklyWorkspaceChanged(Blockly.BlocklyEditor.fullContextName);
         }
         // [lyn 12/31/2013] Check for duplicate component event handlers before
         // running any error handlers to avoid quadratic time behavior.
