@@ -110,12 +110,12 @@ Blockly.ReplMgr.buildYail = function(stag) {
         contextName = contextProperties.$Name;
     }
 
-    if (Blockly.BlocklyEditor.simpleContextName != contextName && !phoneState.tasks[Blockly.BlocklyEditor.simpleContextName]) {
+    if (Blockly.BlocklyEditor.contextName != contextName && !phoneState.tasks[Blockly.BlocklyEditor.contextName]) {
         return;
     }
 
-    if (phoneState.tasks[Blockly.BlocklyEditor.simpleContextName] && phoneState.tasks[Blockly.BlocklyEditor.simpleContextName].packageName != phoneState.packageName) {
-        phoneState.tasks[Blockly.BlocklyEditor.simpleContextName] = null;
+    if (phoneState.tasks[Blockly.BlocklyEditor.contextName] && phoneState.tasks[Blockly.BlocklyEditor.contextName].packageName != phoneState.packageName) {
+        phoneState.tasks[Blockly.BlocklyEditor.contextName] = null;
     }
 
     if (!stag) {
@@ -249,7 +249,7 @@ Blockly.ReplMgr.sendTaskData = function(taskJson, packageName) {
     if (!phoneState.tasks) {
         phoneState.tasks = {};
     }
-    phoneState.tasks[this.BlocklyEditor.simpleContextName] = {'taskJson' : taskJson, 'packageName' : packageName};
+    phoneState.tasks[this.BlocklyEditor.contextName] = {'taskJson' : taskJson, 'packageName' : packageName};
 
 };
 

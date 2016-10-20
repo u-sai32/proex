@@ -55,14 +55,14 @@
         // We expect window.location.hash to have the form:
         // projectId_formName, and to be unique among
         // all the Blockly instances created in this App Inventor session.
-        var formName = window.location.hash.substr(1);
+        var fullContextName = window.location.hash.substr(1);
         if (!window.parent.Blocklies) {
           // We keep a set of Blockly objects indexed by name
           // of the form for which they are the blocks editor
           window.parent.Blocklies = {};
         }
         window.parent.Blocklies[formName] = Blockly;
-        Blockly.ReplMgr.formName = formName; <!-- So we can tell the AssetManager which form we are on. -->
+        Blockly.ReplMgr.fullContextName = fullContextName; <!-- So we can tell the AssetManager which form we are on. -->
         if (window.parent.ReplState === undefined) {
           window.parent.ReplState = new Blockly.ReplStateObj(); // There should be one of these for the whole system
         }

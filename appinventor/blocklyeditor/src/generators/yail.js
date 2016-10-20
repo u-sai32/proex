@@ -499,7 +499,7 @@ Blockly.Yail.getTaskPropertiesLines = function(taskName, componentJson, includeC
     // WARNING:  There may be other type errors of this sort in this file, which
     // (hopefully) will be uncovered in testing. Please
     // be alert for these errors and check carefully.
-    code.push(Blockly.Yail.YAIL_DO_AFTER_TASK_CREATION + formName + Blockly.Yail.YAIL_SPACER
+    code.push(Blockly.Yail.YAIL_DO_AFTER_TASK_CREATION + taskName + Blockly.Yail.YAIL_SPACER
       + yailForComponentProperties.join(" ") + Blockly.Yail.YAIL_CLOSE_BLOCK);
   }
   return code;
