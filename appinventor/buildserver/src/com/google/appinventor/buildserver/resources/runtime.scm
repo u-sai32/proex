@@ -510,7 +510,7 @@
        (define form-environment :: gnu.mapping.Environment
          (gnu.mapping.Environment:make (symbol->string 'form-name)))
 
-       (define (add-to-context-environment name :: gnu.mapping.Symbol object)
+       (define (add-to-form-environment name :: gnu.mapping.Symbol object)
          (android-log-form (format #f "Adding ~A to env ~A with value ~A" name form-environment object))
          (gnu.mapping.Environment:put form-environment name object))
 
@@ -685,7 +685,7 @@
                            (set! (field (this) component-name) component-object)
                            ;; Add the mapping from component name -> component object to the
                            ;; form-environment
-                           (add-to-context-environment component-name component-object))))
+                           (add-to-form-environment component-name component-object))))
                      component-descriptors)
            ;; Now that all the components are constructed we can call
            ;; their init-thunk and their Initialize methods.  We need
@@ -722,7 +722,7 @@
 
          ;; Note (halabelson); I wanted to simply do this, rather than install the do-after-creation mechanism.
          ;; But it doesn't work to do this here, because the form environment is null at this point.
-         ;;(add-to-context-environment 'form-name (this))
+         ;;(add-to-form-environment 'form-name (this))
 
          ;; Another hack. The run() method is defined internally by Kawa to eval the
          ;; top-level forms but it's not getting properly executed, so we force it here.
@@ -733,7 +733,7 @@
            (process-exception exception)))
          (set! form-name (this))
          ;; add a mapping from the form name to the Form into the form-environment
-         (add-to-context-environment 'form-name (this))
+         (add-to-form-environment 'form-name (this))
 
          (register-events events-to-register)
 
@@ -787,7 +787,7 @@
          (gnu.mapping.Environment:make (symbol->string 'task-name)))
 
 
-       (define (add-to-context-environment name :: gnu.mapping.Symbol object)
+       (define (add-to-task-environment name :: gnu.mapping.Symbol object)
          (android-log-task (format #f "Adding ~A to env ~A with value ~A" name task-environment object))
          (gnu.mapping.Environment:put task-environment name object))
 
@@ -948,7 +948,7 @@
                            (set! (field (this) component-name) component-object)
                            ;; Add the mapping from component name -> component object to the
                            ;; form-environment
-                           (add-to-context-environment component-name component-object))))
+                           (add-to-task-environment component-name component-object))))
                      component-descriptors)
            ;; Now that all the components are constructed we can call
            ;; their init-thunk and their Initialize methods.  We need
@@ -985,7 +985,7 @@
 
          ;; Note (halabelson); I wanted to simply do this, rather than install the do-after-creation mechanism.
          ;; But it doesn't work to do this here, because the form environment is null at this point.
-         ;;(add-to-context-environment 'form-name (this))
+         ;;(add-to-task-environment 'task-name (this))
 
          ;; Another hack. The run() method is defined internally by Kawa to eval the
          ;; top-level forms but it's not getting properly executed, so we force it here.
@@ -996,7 +996,7 @@
            (send-error (exception:getMessage))))
          (set! task-name (this))
          ;; add a mapping from the form name to the Form into the form-environment
-         (add-to-context-environment 'task-name (this))
+         (add-to-task-environment 'task-name (this))
 
          (register-events events-to-register)
 
@@ -1064,7 +1064,9 @@
        (android-log (format #f "!!Event being registered in ~A as ~A with value ~A" 'context 'event-func-name event-func-name))
        (if *this-is-the-repl*
            (add-to-context-environment 'context 'event-func-name event-func-name)
-           (add-to-context-environment 'event-func-name event-func-name))))))
+           (if (is-current-context-form)
+               (add-to-form-environment 'event-func-name event-func-name)
+               (add-to-task-environment 'event-func-name event-func-name)))))))
 
 ;;; We make the compiler generate the calling code using the identifier *list-for-runtime* rather
 ;;; than list.   Otherwise, the call-yail-primitive code would break if it were a line in the body
@@ -1173,6 +1175,7 @@
         (begin (set-repl-task) ;;redo
                (add-to-context-environments context (gnu.mapping.Environment:make (symbol->string context)))
                (add-to-context-environment context context *this-task* )
+
                (add-to-context-global-var-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-global-vars"))))
                (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks"))))
         (begin (add-to-context-environments context (*:.task-environment *this-task* ) )
