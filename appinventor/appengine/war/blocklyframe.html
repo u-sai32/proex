@@ -61,16 +61,16 @@
           // of the form for which they are the blocks editor
           window.parent.Blocklies = {};
         }
-        window.parent.Blocklies[formName] = Blockly;
+        window.parent.Blocklies[fullContextName] = Blockly;
         Blockly.ReplMgr.fullContextName = fullContextName; <!-- So we can tell the AssetManager which form we are on. -->
         if (window.parent.ReplState === undefined) {
           window.parent.ReplState = new Blockly.ReplStateObj(); // There should be one of these for the whole system
         }
         window.parent.ReplState.phoneState = {}; <!-- Reset the phone state when we are reloaded -->
-        Blockly.BlocklyEditor.startup(document.body, formName);
+        Blockly.BlocklyEditor.startup(document.body, fullContextName);
         Blockly.ComponentTypes.populateTypes();
-        window.parent.BlocklyPanel_initBlocksArea(formName);
-        window.parent.BlocklyPanel_checkWarningState(formName);
+        window.parent.BlocklyPanel_initBlocksArea(fullContextName);
+        window.parent.BlocklyPanel_checkWarningState(fullContextName);
       }
     </script>
   </head>
