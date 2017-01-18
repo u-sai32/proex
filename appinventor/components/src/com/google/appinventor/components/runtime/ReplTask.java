@@ -25,26 +25,15 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.os.Bundle;
 import android.util.Log;
-import android.view.Menu;
-import android.view.MenuItem;
-import android.view.MenuItem.OnMenuItemClickListener;
-import android.widget.Toast;
-import android.widget.LinearLayout;
-import android.widget.TextView;
-import android.app.Notification;
-import android.app.NotificationManager;
-import android.app.PendingIntent;
-import android.app.Activity;
 import android.content.Context;
 
 
 public class ReplTask extends Task {
 
-  private static final String REPL_ASSET_DIR = "/sdcard/AppInventor/assets/";
-  private boolean assetsLoaded = false;
-  private boolean IsUSBRepl = false;
-  private boolean isDirect = false; // True for USB and emulator (AI2)
 
+  protected static Task replTask = null;
+  private static final String LOG_TAG = "ReplTask";
+  private boolean assetsLoaded = true;
   private HashMap<String, TaskThread> TaskThreads = new HashMap<String, TaskThread>();
 
   final protected class ReplTaskHandler extends Task.TaskHandler {
@@ -63,14 +52,15 @@ public class ReplTask extends Task {
 
   public ReplTask() {
     super();
-    Log.i("ReplTask", "constructorrrrrrr");
-    replTask = this;
+    Log.i("ReplTask", "Started");
   }
 
   @Override
   public void onCreate() {
     super.onCreate();
-    Log.d("ReplTask", "onCreate");
+    Log.d("ReplTask", "Task onCreate");
+    replTask = this;
+    getReplTask();
   }
 
   @Override
@@ -81,42 +71,47 @@ public class ReplTask extends Task {
     System.exit(0);
   }
 
-  protected void processExtras(Intent intent, boolean restart) {
-    Bundle extras = intent.getExtras();
-    if (extras != null) {
-      Log.d("ReplTask", "extras: " + extras);
-      Iterator<String> keys = extras.keySet().iterator();
-      while (keys.hasNext()) {
-        Log.d("ReplTask", "Extra Key: " + keys.next());
-      }
+  @Override
+  public int onStartCommand(Intent intent, int flags, int startId) {
+    Log.d("ReplTask", "ReplTask onStartCommand Called");
+    replTask = this;
+    Log.d("ReplTask", "set replTask=");
+    String startValue = intent.getStringExtra(Form.SERVICE_ARG);
+    String taskName = intent.getStringExtra(Form.SERVICE_NAME);
+    if (taskName == null) { // This is ReplTask itself Starting
+      return START_STICKY;
     }
-    if ((extras != null) && extras.getBoolean("rundirect")) {
-      Log.d("ReplTask", "processExtras rundirect is true and restart is " + restart);
-      isDirect = true;
+    Object decodedStartVal = Form.decodeJSONStringForForm(startValue, "get start value");
+    TaskStarted(decodedStartVal);
+    Log.d("Task", "Done Dispatch but not Returned");
+    return START_STICKY;
+  }
 
+
+  public void runTaskCode(String taskName, Runnable runnable) {
+    Log.d("ReplTask", "Got executed. Thank God");
+    TaskThread taskThread = this.TaskThreads.get(taskName);
+    if (taskThread == null) {
+      taskThread = new TaskThread(taskName, this);
+      this.TaskThreads.put(taskName, taskThread);
     }
-  }
-
-  public boolean isDirect() {
-    return isDirect;
-  }
-
-  public void setIsUSBrepl() {
-    IsUSBRepl = true;
+    TaskHandler taskHandler = taskThread.getTaskHandler();
+    taskHandler.post(runnable);
   }
 
 
-  // We return true if the assets for the Companion have been loaded and
-  // displayed so we should look for all future assets in the sdcard which
-  // is where assets are placed for the companion.
-  // We return false until setAssetsLoaded is called which is done
-  // by the phone status block
   public boolean isAssetsLoaded() {
     return assetsLoaded;
   }
 
-  public void setAssetsLoaded() {
-    assetsLoaded = true;
+
+  public static Task getReplTask() {
+    if (replTask == null) {
+      Log.d(LOG_TAG, "replTask is null yet");
+    }
+    else Log.d(LOG_TAG, "replTask is VALID yet");
+    return replTask;
   }
+
 
 }

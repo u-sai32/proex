@@ -450,14 +450,27 @@ Blockly.ReplMgr.putYail = (function() {
                 }
 
             };
+            var repl_input = {};
+            repl_input.form = {
+                code: formWork.code,
+                block_id: blockid,
+            };
+            repl_input.tasks = [];
+            repl_input.tasks.push({
+               name: "Task1",
+               code: taskWork.code,
+               block_id: taskblockid,
+            });
+            console.log("taskWorkCode" + taskWork.code);
             encoder.add('mac', Blockly.ReplMgr.hmac(formWork.code + rs.seq_count + blockid));
             encoder.add('seq', rs.seq_count);
             encoder.add('form_code', formWork.code);
             encoder.add('form_blockid', blockid);
-            encoder.add('task_count', "1");
+            encoder.add('repl_input', JSON.stringify(repl_input));
             encoder.add('task0_code', taskWork.code);
             encoder.add('task0_blockid', taskblockid);
             var stuff = encoder.toString();
+            console.log("encoderTostring=" + encoder.toString())
             conn.send(stuff);
         },
         'doversioncheck' : function() {

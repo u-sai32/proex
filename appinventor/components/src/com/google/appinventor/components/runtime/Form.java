@@ -106,6 +106,8 @@ public class Form extends Activity
 
   private static final String ARGUMENT_NAME = "APP_INVENTOR_START";
 
+  public static final String SERVICE_NAME = "SERVICE_NAME";
+
   public static final String SERVICE_ARG = "SERVICE_START_ARGUMENT";
 
   public static final String APPINVENTOR_URL_SCHEME = "appinventor";
@@ -2098,7 +2100,7 @@ public class Form extends Activity
     }
   }
 
-  private void startNewService(String taskName, Object startValue) {
+  protected void startNewService(String taskName, Object startValue) {
     Intent serviceIntent = new Intent();
     // Note that the following is dependent on task generated class names being the same as
     // their task names and all tasks being in the same package.

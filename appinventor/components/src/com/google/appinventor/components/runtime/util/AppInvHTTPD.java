@@ -179,6 +179,7 @@ public class AppInvHTTPD extends NanoHTTPD {
       String formCode = "#f";
       String formBlockId = "-2";
       int taskCount = 0;
+      Log.d("AI2", "repl_input==" + repl_input);
       Map<String, String> taskCodes = new HashMap<String, String>();
       Map<String, String> taskBlockIds = new HashMap<String, String>();
       try {
@@ -186,7 +187,7 @@ public class AppInvHTTPD extends NanoHTTPD {
         JSONObject formInput = replInput.getJSONObject("form");
         formCode = formInput.getString("code");
         formBlockId = formInput.getString("block_id");
-        JSONArray tasks = formInput.getJSONArray("tasks");
+        JSONArray tasks = replInput.getJSONArray("tasks");
         taskCount = tasks.length();
         for (int i = 0; i < tasks.length(); ++i) {
           JSONObject task = tasks.getJSONObject(i);
@@ -216,9 +217,6 @@ public class AppInvHTTPD extends NanoHTTPD {
       form.loadComponents();  // load all components before Eval
       try {
 
-        for (String code : taskCodes.values()) {
-          scheme.eval(code);
-        }
 
         // Don't evaluate a simple "#f" which is used by the poller
         if (input_code.equals("#f")) {
@@ -226,6 +224,12 @@ public class AppInvHTTPD extends NanoHTTPD {
         } else {
           scheme.eval(formCode);
         }
+
+        for (String code : taskCodes.values()) {
+          Log.d(LOG_TAG, "we ARE indeed TASKING!!!");
+          scheme.eval(code);
+        }
+
         res = new Response(HTTP_OK, MIME_JSON, RetValManager.fetch(false));
       } catch (Throwable ex) {
         Log.e(LOG_TAG, "newblocks: Scheme Failure", ex);

@@ -297,6 +297,7 @@
 (define-alias AndroidLooper <android.os.Looper>)
 (define-alias SimpleForm <com.google.appinventor.components.runtime.Form>)
 (define-alias SimpleTask <com.google.appinventor.components.runtime.Task>)
+(define-alias SimpleReplTask <com.google.appinventor.components.runtime.ReplTask>)
 
 (define (call-Initialize-of-components context . component-names)
   ;; Do any inherent/implied initializations
@@ -2942,7 +2943,7 @@ list, use the make-yail-list constructor with no arguments.
     (syntax-rules ()
         ((_ blockid expr)
          (begin (android-log (format #f "Out UI Thread : ~A" (java.lang.Thread:currentThread)))
-                ))))
+                (in-bg blockid (delay expr))))))
 
 
 (define-syntax process-repl-form-input
@@ -2977,7 +2978,15 @@ list, use the make-yail-list constructor with no arguments.
                             (list
                              "NOK"
                              (exception:getMessage)))))))))
-
+(define (in-bg blockid promise)
+  (set! *this-is-the-repl* #t)          ;; Should do this somewhere else...
+  (android-log (format #f "in BG called: ~A" (java.lang.Thread:currentThread)))
+  (*repl-task*:runTaskCode
+   "Task1"
+   (runnable (lambda ()
+               (force promise))))
+  (android-log (format #f "in BG done: ~A" (java.lang.Thread:currentThread)))
+  )
 ;; send-to-block is used for all communication back to the blocks editor
 ;; Calls on report are also generated for code from the blocks compiler
 ;; when a block is being watched.
@@ -3047,7 +3056,7 @@ list, use the make-yail-list constructor with no arguments.
     (set! *this-task* (SimpleTask:getTask task-name)))
 
 (define (set-repl-task)
-  (set! *repl-task* (SimpleTask:getReplTask)))
+  (set! *repl-task* (SimpleReplTask:getReplTask)))
 
 
 (define (is-current-context-form) :: boolean

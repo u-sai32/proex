@@ -47,7 +47,6 @@ public class Task extends Service
 
   protected static Map<String, Task> taskMap = new HashMap<String, Task>();
 
-  protected static Task replTask = null;
 
   protected String taskName;
   protected int taskType;
@@ -71,6 +70,7 @@ public class Task extends Service
 
     protected final Task task;
 
+
     public TaskThread(Task task) {
       super(task.getTaskName());
       this.task = task;
@@ -78,6 +78,11 @@ public class Task extends Service
 
     public TaskThread(Task task, int priority) {
       super(task.getTaskName(), priority);
+      this.task = task;
+    }
+
+    public TaskThread(String taskName, Task task) {
+      super(taskName);
       this.task = task;
     }
 
@@ -110,7 +115,7 @@ public class Task extends Service
     }
   }
 
-  TaskThread taskThread;
+  private TaskThread taskThread;
 
 
   // Application lifecycle related fields
@@ -165,6 +170,7 @@ public class Task extends Service
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
+    Log.d("Task", "Task onStartCommand Called");
     String startValue = intent.getStringExtra(Form.SERVICE_ARG);
     Object decodedStartVal = Form.decodeJSONStringForForm(startValue, "get start value");
     TaskStarted(decodedStartVal);
@@ -350,9 +356,6 @@ public class Task extends Service
     return 0;
   }
 
-  public static Task getReplTask() {
-    return replTask;
-  }
 
   public static Task getTask(String taskName) {
     return taskMap.get(taskName);
