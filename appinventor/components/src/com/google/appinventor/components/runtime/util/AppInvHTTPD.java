@@ -176,26 +176,26 @@ public class AppInvHTTPD extends NanoHTTPD {
         Response res = new Response(HTTP_OK, MIME_JSON, "{\"status\" : \"BAD\", \"message\" : \"Security Error: No HMAC Key\"}");
         return(res);
       }
+      String formName = "";
       String formCode = "#f";
       String formBlockId = "-2";
-      int taskCount = 0;
       Log.d("AI2", "repl_input==" + repl_input);
       Map<String, String> taskCodes = new HashMap<String, String>();
       Map<String, String> taskBlockIds = new HashMap<String, String>();
       try {
         JSONObject replInput = new JSONObject(repl_input);
         JSONObject formInput = replInput.getJSONObject("form");
+        formName = formInput.getString("name");
         formCode = formInput.getString("code");
-        formBlockId = formInput.getString("block_id");
+        formBlockId = formInput.getString("blockid");
         JSONArray tasks = replInput.getJSONArray("tasks");
-        taskCount = tasks.length();
         for (int i = 0; i < tasks.length(); ++i) {
           JSONObject task = tasks.getJSONObject(i);
           if (task.getString("code").equals("#f")) {
             continue; // skip evaluation of "#f"
           }
           taskCodes.put(task.getString("name"), task.getString("code"));
-          taskBlockIds.put(task.getString("name"), task.getString("block_id"));
+          taskBlockIds.put(task.getString("name"), task.getString("blockid"));
         }
       } catch (JSONException e) {
         e.printStackTrace();

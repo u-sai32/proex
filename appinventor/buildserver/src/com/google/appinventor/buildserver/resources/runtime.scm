@@ -26,40 +26,32 @@
 (define (android-log message)
   (when *debug* (android.util.Log:i "YAIL" message)))
 
-;;;; add-component
-(define-constant simple-component-package-name "com.google.appinventor.components.runtime")
-
 ;; environment helper functions
 ;; generic functions that do a boolean and null check on any environment passed
 ;; TODO : they should probably do an instance? check
 (define (add-to-environment env :: gnu.mapping.Environment symbol :: gnu.mapping.Symbol object)
-    (if (and env
-             (not (eq? env #!null)))
+    (if (not (eq? env #!null))
         (gnu.mapping.Environment:put env symbol object)
         #f))
 
 (define (remove-from-environment env :: gnu.mapping.Environment symbol :: gnu.mapping.Symbol)
-    (if (and env
-             (not (eq? env #!null)))
+    (if (not (eq? env #!null))
         (gnu.mapping.Environment:remove env symbol)
         #f))
 
 (define (is-bound-in-environment env :: gnu.mapping.Environment symbol :: gnu.mapping.Symbol)
-    (if (and env
-             (not (eq? env #!null)))
+    (if (not (eq? env #!null))
         (gnu.mapping.Environment:isBound env symbol)
         #f))
 
 (define (get-from-environment env :: gnu.mapping.Environment symbol :: gnu.mapping.Symbol)
-    (if (and env
-             (not (eq? env #!null))
+    (if (and (not (eq? env #!null))
              (gnu.mapping.Environment:isBound env symbol))
         (gnu.mapping.Environment:get env symbol)
         #!null))
 
 (define (lookup-in-environment env :: gnu.mapping.Environment symbol :: gnu.mapping.Symbol #!optional (default-value #f))
-    (if (and env
-             (not (eq? env #!null))
+    (if (and (not (eq? env #!null))
              (gnu.mapping.Environment:isBound env symbol))
         (gnu.mapping.Environment:get env symbol)
         default-value))
@@ -384,7 +376,7 @@
 
 
 ;;; Call a component's property setter method with argument coercion
-;;; Ex: (set-and-coerce-property! 'Screen1 'Button3 'FontSize 14 'number)
+;;; Ex: (set-and-coerce-property! 'Button3 'FontSize 14 'number)
 ;;; Note: see also %set-expanded-property below
 (define (set-and-coerce-property! component prop-sym property-value property-type)
   (let ((component (coerce-to-component-and-verify component)))
