@@ -72,6 +72,7 @@ Blockly.ReplStateObj.prototype = {
 // Blockly.mainWorkSpace --- hold the main workspace
 
 Blockly.ReplMgr.buildYail = function() {
+    console.log("called buildYail of " + Blockly.BlocklyEditor.contextName);
     var phoneState;
     var code = [];
     var blocks;
@@ -94,8 +95,10 @@ Blockly.ReplMgr.buildYail = function() {
         for (var index in phoneState.tasks) {
             if (!phoneState.tasks.hasOwnProperty(task))
                 continue;
-            if (!phoneState.tasks[index])
+            if (!phoneState.tasks[index]) {
+                delete phoneState.tasks[index];
                 continue;
+            }
             phoneState.tasks[index].componentYail = "";
             phoneState.tasks[index].blocksYail = "";
         }
@@ -112,24 +115,32 @@ Blockly.ReplMgr.buildYail = function() {
             return input;
         };
     }
-    var jsonObject = JSON.parse(phoneState.form.json);
+
+    var contextName = Blockly.BlocklyEditor.contextName;
+    var jsonObject;
+    if (phoneState.form.name == contextName) {
+        jsonObject = JSON.parse(phoneState.form.json);
+    } else {
+        for (var task in phoneState.tasks) {
+            if (!phoneState.tasks.hasOwnProperty(task)) {
+                continue;
+            }
+            if (!phoneState.tasks[task] || phoneState.tasks[task].packageName != phoneState.form.packageName) {
+                delete phoneState.tasks[task];
+                continue;
+            }
+            if (phoneState.tasks[task].name == contextName) {
+                jsonObject = JSON.parse(phoneState.tasks[task].json);
+            }
+        }
+    }
+    // Only build yail for current screen and all valid tasks
+    if (!jsonObject) {
+        return
+    }
     var contextProperties;
-    var contextName;
     if (jsonObject.Properties) {
         contextProperties = jsonObject.Properties;
-        contextName = contextProperties.$Name;
-    }
-
-    // Only build yail for current screen and all valid tasks
-    if (Blockly.BlocklyEditor.contextName != contextName
-            && !phoneState.tasks[Blockly.BlocklyEditor.contextName]) {
-        return;
-    }
-    // Allow only tasks of current project and remove other
-    if (phoneState.tasks[Blockly.BlocklyEditor.contextName]
-            && phoneState.tasks[Blockly.BlocklyEditor.contextName].packageName != phoneState.form.packageName) {
-        delete phoneState.tasks[Blockly.BlocklyEditor.contextName];
-        return;
     }
 
     var componentMap = Blockly.Component.buildComponentMap([], [], false, false);
@@ -137,13 +148,13 @@ Blockly.ReplMgr.buildYail = function() {
     for (var comp in componentMap.components)
         componentNames.push(comp);
 
+    var sourceType = jsonObject.Source;
     var contextInfo = {
         name: contextName,
         type: sourceType
     };
 
     if (contextProperties) {
-        var sourceType = jsonObject.Source;
         if (sourceType == "Form") {
             if (contextName != 'Screen1')
                 code.push(Blockly.Yail.getComponentRenameString("Screen1", contextName));
@@ -158,6 +169,7 @@ Blockly.ReplMgr.buildYail = function() {
         componentNames = uniqueNames;
 
         code = code.join('\n');
+        console.log("2 buildYail of " + Blockly.BlocklyEditor.contextName);
         if (sourceType == "Form") {
             if (phoneState.form.componentYail != code) {
                 // We need to send all of the component cruft (sorry)
@@ -229,13 +241,52 @@ Blockly.ReplMgr.buildYail = function() {
     }
 };
 
-Blockly.ReplMgr.sendFormData = function(formJson, packageName) {
+Blockly.ReplMgr.sendFormData = function(formName, formJson, packageName) {
+    console.log("sendFormData : " + Blockly.BlocklyEditor.contextName);
     var phoneState = window.parent.ReplState.phoneState;
     if (!phoneState.form) {
         phoneState.form = {};
     }
-    window.parent.ReplState.phoneState.form.json = formJson;
-    window.parent.ReplState.phoneState.form.packageName = packageName;
+    phoneState.form.name = Blockly.BlocklyEditor.contextName;
+    phoneState.form.json = formJson;
+    phoneState.form.packageName = packageName;
+    var context = this;
+    var poller = function() {   // Keep track of "this"
+        // Make sure no more Tasks yail need to be been sent (There is no guarantee though!)
+        for (var contextName in phoneState.phoneQueue) {
+            if (!phoneState.phoneQueue.hasOwnProperty(contextName))
+                continue;
+            if (contextName == phoneState.form.name)
+                continue;
+            if (phoneState.phoneQueue[contextName] && phoneState.phoneQueue[contextName].length) {
+                // we have non-empty queues so wait for them to be sent
+                if (context.polltimer) {
+                    clearTimeout(context.polltimer);
+                }
+                context.polltimer = setTimeout(poller, 500);
+                return;
+            }
+        }
+        context.polltimer = null;
+        return context.pollYail.call(context);
+    };
+    if (this.polltimer) {       // We have one running, punt it.
+        clearTimeout(this.polltimer);
+    }
+    this.polltimer = setTimeout(poller, 500);
+};
+
+Blockly.ReplMgr.sendTaskData = function(taskName, taskJson, packageName) {
+    console.log("sendTaskData : " + Blockly.BlocklyEditor.contextName);
+    var phoneState = window.parent.ReplState.phoneState;
+    if (!phoneState.tasks) {
+        phoneState.tasks = {};
+    }
+    phoneState.tasks[Blockly.BlocklyEditor.contextName] = {
+        'name' : Blockly.BlocklyEditor.contextName,
+        'json' : taskJson,
+        'packageName' : packageName
+    };
     var context = this;
     var poller = function() {   // Keep track of "this"
         context.polltimer = null;
@@ -247,17 +298,10 @@ Blockly.ReplMgr.sendFormData = function(formJson, packageName) {
     this.polltimer = setTimeout(poller, 500);
 };
 
-Blockly.ReplMgr.sendTaskData = function(taskJson, packageName) {
-    var phoneState = window.parent.ReplState.phoneState;
-    if (!phoneState.tasks) {
-        phoneState.tasks = {};
-    }
-    phoneState.tasks[this.BlocklyEditor.contextName] = {'json' : taskJson, 'packageName' : packageName};
-};
-
 Blockly.ReplMgr.RefreshAssets = null;
 
 Blockly.ReplMgr.pollYail = function() {
+    console.log("called pollYail of " + Blockly.BlocklyEditor.contextName);
     try {
         if (window === undefined)    // If window is gone, then we are a zombie timer firing
             return;                  // in a destroyed frame.
@@ -283,7 +327,7 @@ Blockly.ReplMgr.resetYail = function(partial) {
     window.parent.ReplState.phoneState.initialized = false; // so running io stops
     this.putYail.reset();
     if (!partial) {
-        window.parent.ReplState.phoneState = { "phoneQueue" : []};
+        window.parent.ReplState.phoneState = { "phoneQueue" : {}};
     }
 };
 
@@ -308,6 +352,7 @@ Blockly.ReplMgr.putYail = (function() {
     var engine = {
         // Enqueue form and tasks for the phone
         'putYail' : function(contextInfo, code, block, success, failure) {
+            console.log("putYail by " + Blockly.BlocklyEditor.contextName + "=> " + code);
             rs = window.parent.ReplState;
             context = this;
             if (rs === undefined || rs === null) {
@@ -319,9 +364,12 @@ Blockly.ReplMgr.putYail = (function() {
                 return;
             }
             if (!rs.phoneState.phoneQueue) {
-                rs.phoneState.phoneQueue = [];
+                rs.phoneState.phoneQueue = {};
             }
-            rs.phoneState.phoneQueue.push({
+            if (!rs.phoneState.phoneQueue[contextInfo.name]) {
+                rs.phoneState.phoneQueue[contextInfo.name] = [];
+            }
+            rs.phoneState.phoneQueue[contextInfo.name].push({
                 'name' : contextInfo.name,
                 'type' : contextInfo.type,
                 'code' : Blockly.ReplMgr.quoteUnicode(code), // Deal with unicode characters and kawa
@@ -335,6 +383,7 @@ Blockly.ReplMgr.putYail = (function() {
             }
         },
         'pollphone' : function() {
+            console.log("pollphone by " + Blockly.BlocklyEditor.contextName);
             if (!rs.didversioncheck) {
                 engine.doversioncheck();
                 return;
@@ -342,7 +391,7 @@ Blockly.ReplMgr.putYail = (function() {
             if (!phonereceiving) {
                 engine.receivefromphone();
             }
-            var formInput;
+            var formInput = {};
             var taskInputs = [];
             if (top.loadAll) {
                 var chunk;
@@ -354,7 +403,7 @@ Blockly.ReplMgr.putYail = (function() {
                 var first = true;
                 var chunkedForm;
                 var chunkedTasks = {};
-                while ((chunk = rs.phoneState.phoneQueue.shift())) {
+                while ((chunk = rs.phoneState.phoneQueue[Blockly.BlocklyEditor.contextName].shift())) {
                     if (first) {
                         first = false;
                     }
@@ -387,7 +436,7 @@ Blockly.ReplMgr.putYail = (function() {
                     return;
                 }
                 formInput = {
-                    'name' : formName
+                    'name' : formName,
                     'code' : formCode,
                     'block' : null,   // We cannot link this large code block
                                       // to any particular block (yet)
@@ -399,19 +448,19 @@ Blockly.ReplMgr.putYail = (function() {
                     console.log("Screen Slow Path: " + formInput.name + " => "+ formInput.code);
                     formInput.block = formLastBlock; // Only one block, so we can provide it
                 }
-                for (var context in chunkedTasks) {
-                    if (!chunkedTasks.hasOwnProperty(context))
+                for (var contextName in chunkedTasks) {
+                    if (!chunkedTasks.hasOwnProperty(contextName))
                         continue;
-                    if (chunkedTasks[context] !== undefined) {
+                    if (chunkedTasks[contextName] !== undefined) {
                         var taskInput = {
-                            name: context;
-                            code: taskCodes[context],
+                            name: contextName,
+                            code: taskCodes[contextName],
                             block: null,
                             chunking: true
                         }
-                        if (chunkedTasks[context] === true) {
+                        if (chunkedTasks[contextName] === true) {
                             console.log("Task Chunk: " + taskInput.name + " => " + taskInput.code);
-                        } else if (chunkedTasks[context] === false) {
+                        } else if (chunkedTasks[contextName] === false) {
                             console.log("Task Slow Path: " + taskInput.name + " => " + taskInput.code);
                             taskInput.block = taskLastBlocks[chunked];
                         }
@@ -419,7 +468,11 @@ Blockly.ReplMgr.putYail = (function() {
                     }
                 }
             } else {
-                var chunk = rs.phoneState.phoneQueue.shift();
+                var chunk = rs.phoneState.phoneQueue[Blockly.BlocklyEditor.contextName].shift();
+                if (!chunk) {
+                    rs.phoneState.ioRunning = false;
+                    return;
+                }
                 if (chunk.type == "Form") {
                     formInput = chunk;
                 }
@@ -427,17 +480,14 @@ Blockly.ReplMgr.putYail = (function() {
                     if (chunk)
                         taskInputs.push(chunk);
                 }
-                if (!chunk) {
-                    rs.phoneState.ioRunning = false;
-                    return;
-                }
+
             }
             var repl_input = {
                 form: {},
                 tasks: []
             };
             if (formInput && formInput.block) {
-                formInput.blockid = formInput.block.id; //TODO: make blockid = "name/id"
+                formInput.blockid = formInput.block.id;
             } else {
                 if (formInput && formInput.chunking) { // Used to indicate an error in when chunking
                     formInput.blockid = "-2";
@@ -452,7 +502,7 @@ Blockly.ReplMgr.putYail = (function() {
             }
             for (var taskInput of taskInputs) {
                 if (taskInput && taskInput.block) {
-                    taskInput.blockid = taskInput.block.id; //TODO : make blockid = "name/id"
+                    taskInput.blockid = taskInput.block.id;
                 } else {
                     if (taskInput && taskInput.chunking) {
                         taskInput.blockid = "-2";
@@ -498,9 +548,11 @@ Blockly.ReplMgr.putYail = (function() {
                     }
                 }
             };
-            encoder.add('mac', Blockly.ReplMgr.hmac(JSON.stringify(repl_input) + rs.seq_count));
+            var repl_input_json = JSON.stringify(repl_input);
+            console.log("sent by " + Blockly.BlocklyEditor.contextName + " => " + repl_input_json);
+            encoder.add('mac', Blockly.ReplMgr.hmac(repl_input_json + rs.seq_count));
             encoder.add('seq', rs.seq_count);
-            encoder.add('repl_input', JSON.stringify(repl_input));
+            encoder.add('repl_input', repl_input_json);
             var stuff = encoder.toString();
             conn.send(stuff);
         },
@@ -546,7 +598,7 @@ Blockly.ReplMgr.putYail = (function() {
                     // code (the reseting code, LEAVE the pollphone() call
                     // or visit the land of the lost!
                     context.resetYail(true); // Reset (partial reset)
-                    rs.phoneState.phoneQueue = []; // But flush the queue of pending code
+                    rs.phoneState.phoneQueue[Blockly.BlocklyEditor.contextName] = []; // But flush the queue of pending code
                     context.pollYail();  // Regenerate
                     engine.pollphone();  // Next...
                     return;

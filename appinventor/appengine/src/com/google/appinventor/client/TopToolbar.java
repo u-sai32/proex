@@ -885,8 +885,14 @@ public class TopToolbar extends Composite {
             + "Ignoring attempt to start the repl.");
       return;
     }
-    DesignToolbar.Context screen = currentProject.getContext(currentProject.currentContext);
-    screen.blocksEditor.startRepl(!start, forEmulator, forUsb);
+    // We need to startRepl for all tasks and the last opened screen
+    // Look for all tasks
+    for (DesignToolbar.Context task : currentProject.getTasks()) {
+      task.blocksEditor.startRepl(!start, forEmulator, forUsb);
+    }
+    // Look for the last opened Screen
+    DesignToolbar.Context lastScreen = currentProject.getContext(currentProject.lastScreen);
+    lastScreen.blocksEditor.startRepl(!start, forEmulator, forUsb);
     if (start) {
       if (forEmulator) {        // We are starting the emulator...
         updateConnectToDropDownButton(true, false, false);

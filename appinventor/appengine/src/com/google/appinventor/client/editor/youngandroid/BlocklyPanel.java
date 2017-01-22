@@ -1007,11 +1007,11 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   }-*/;
 
   public static native void doSendFormJson(String formName, String formJson, String packageName) /*-{
-    $wnd.Blocklies[formName].ReplMgr.sendFormData(formJson, packageName);
+    $wnd.Blocklies[formName].ReplMgr.sendFormData(formName, formJson, packageName);
   }-*/;
 
-  public static native void doSendTaskJson(String formName, String formJson, String packageName) /*-{
-    $wnd.Blocklies[formName].ReplMgr.sendTaskData(formJson, packageName);
+  public static native void doSendTaskJson(String taskName, String taskJson, String packageName) /*-{
+    $wnd.Blocklies[taskName].ReplMgr.sendTaskData(taskName, taskJson, packageName);
   }-*/;
 
   public static native void doResetYail(String formName) /*-{

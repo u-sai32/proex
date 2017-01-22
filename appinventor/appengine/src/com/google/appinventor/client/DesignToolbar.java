@@ -31,9 +31,7 @@ import com.google.gwt.user.client.Window;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.Label;
 
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 import static com.google.appinventor.client.Ode.MESSAGES;
 
@@ -75,6 +73,7 @@ public class DesignToolbar extends Toolbar {
     public final Map<String, Context> screens; // screen name -> Screen
     public final Map<String, Context> tasks; // task name -> Task
     public String currentContext; // name of currently displayed screen/task
+    public String lastScreen; // name of the last opened screen. May be equal to currentContext.
 
     public DesignProject(String name, long projectId) {
       this.name = name;
@@ -82,6 +81,7 @@ public class DesignToolbar extends Toolbar {
       tasks = Maps.newHashMap();
       // Screen1 is initial screen by default
       currentContext = YoungAndroidSourceNode.SCREEN1_FORM_NAME;
+      lastScreen = currentContext;
       // Let BlocklyPanel know which screen to send Yail for
       BlocklyPanel.setCurrentForm(projectId + "_" + currentContext);
     }
@@ -93,6 +93,19 @@ public class DesignToolbar extends Toolbar {
       }
       return context;
     }
+
+    public ArrayList<Context> getTasks() {
+      ArrayList<Context> tasks = new ArrayList<>();
+      for (Context task : this.tasks.values()) {
+        tasks.add(task);
+      }
+      return tasks;
+    }
+
+    public Context getLastScreen() {
+      return screens.get(lastScreen);
+    }
+
     // Returns true if we added the screen (it didn't previously exist), false otherwise.
     public boolean addScreen(String name, FileEditor formEditor, FileEditor blocksEditor) {
       if (!screens.containsKey(name) && !tasks.containsKey(name)) {
@@ -120,8 +133,11 @@ public class DesignToolbar extends Toolbar {
       tasks.remove(name);
     }
 
-    public void setCurrentScreen(String name) {
+    public void setCurrentContext(String name) {
       currentContext = name;
+      if (screens.containsKey(currentContext)) {
+        this.lastScreen = currentContext;
+      }
     }
   }
 
@@ -352,9 +368,9 @@ public class DesignToolbar extends Toolbar {
     if (isScreen) {
       Context screen = currentProject.screens.get(newScreenName);
       ProjectEditor projectEditor = screen.contextEditor.getProjectEditor();
-      currentProject.setCurrentScreen(newScreenName);
+      currentProject.setCurrentContext(newScreenName);
       setDropDownButtonCaption(WIDGET_NAME_SCREENS_DROPDOWN, newScreenName);
-      OdeLog.log("Setting currentScreen to " + newScreenName);
+      OdeLog.log("Setting currentContext to " + newScreenName);
       if (currentView == View.CONTEXT) {
         projectEditor.selectFileEditor(screen.contextEditor);
         toggleEditor(false);
@@ -367,9 +383,9 @@ public class DesignToolbar extends Toolbar {
     } else if (isTask) {
       Context task = currentProject.tasks.get(newScreenName);
       ProjectEditor projectEditor = task.contextEditor.getProjectEditor();
-      currentProject.setCurrentScreen(newScreenName);
+      currentProject.setCurrentContext(newScreenName);
       setDropDownButtonCaption(WIDGET_NAME_SCREENS_DROPDOWN, newScreenName);
-      OdeLog.log("Setting currentScreen to " + newScreenName);
+      OdeLog.log("Setting currentContext to " + newScreenName);
       if (currentView == View.CONTEXT) {
         projectEditor.selectFileEditor(task.contextEditor);
         toggleEditor(false);
