@@ -322,6 +322,8 @@ public final class YaBlocksEditor extends FileEditor
     hideComponentBlocks();
   }
 
+
+
   public static void onBlocksAreaChanged(String formName) {
     YaBlocksEditor editor = contextToBlocksEditor.get(formName);
     if (editor != null) {
@@ -332,12 +334,36 @@ public final class YaBlocksEditor extends FileEditor
     }
   }
 
+  public static void onReplMgrConnected(String contextName) {
+    YaBlocksEditor editor = contextToBlocksEditor.get(contextName);
+    if (editor != null) {
+      OdeLog.log("Got blocks area replMgrConnected for " + contextName);
+      Ode.getInstance().getEditorManager().scheduleAutoSave(editor);
+      if (editor instanceof YaBlocksEditor)
+        editor.replMgrConnected();
+    }
+
+  }
+
   public synchronized void sendComponentData() {
     try {
       blocksArea.sendComponentData(myContextEditor.encodeContextAsJsonString(true),
         packageNameFromPath(getFileId()));
     } catch (YailGenerationException e) {
       e.printStackTrace();
+    }
+  }
+
+  public synchronized void replMgrConnected() {
+    if (this.isTaskBlocksEditor()) {
+      this.sendComponentData();
+      return;
+    }
+    // get All Tasks Blocks Editors
+    YaProjectEditor projectEditor = (YaProjectEditor) this.projectEditor;
+    ArrayList<YaBlocksEditor> taskBlocksEditors = projectEditor.getAllTaskBlocksEditors();
+    for (YaBlocksEditor blocksEditor : taskBlocksEditors) {
+      blocksEditor.sendComponentData();
     }
   }
 

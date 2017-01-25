@@ -340,6 +340,16 @@ public final class YaProjectEditor extends ProjectEditor implements ProjectChang
     }
   }
 
+  public ArrayList<YaBlocksEditor> getAllTaskBlocksEditors() {
+    ArrayList<YaBlocksEditor> taskBlocksEditors = new ArrayList<YaBlocksEditor>();
+    for (EditorSet set : editorMap.values()) {
+      if (set.blocksEditor.isTaskBlocksEditor()) {
+        taskBlocksEditors.add(set.blocksEditor);
+      }
+    }
+    return taskBlocksEditors;
+  }
+
   /**
    * @return a list of component instance names
    */

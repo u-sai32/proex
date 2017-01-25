@@ -85,6 +85,13 @@ Blockly.ReplMgr.buildYail = function() {
         };
     }
     phoneState = window.parent.ReplState.phoneState;
+    if (!phoneState.form) {
+        phoneState.form = {};
+    }
+    if (!phoneState.tasks) {
+        phoneState.tasks = {};
+    }
+    console.log("1.1 buildYail of " + Blockly.BlocklyEditor.contextName);
     if (!phoneState.form.json || !phoneState.form.packageName)
         return;                 // Nothing we can do without these
 
@@ -104,6 +111,7 @@ Blockly.ReplMgr.buildYail = function() {
         }
     }
 
+    console.log("1.2 called buildYail of " + Blockly.BlocklyEditor.contextName);
     var propertyNameConverter;
     if (phoneState.nofqcn) {
         propertyNameConverter = function(input) {
@@ -125,7 +133,16 @@ Blockly.ReplMgr.buildYail = function() {
             if (!phoneState.tasks.hasOwnProperty(task)) {
                 continue;
             }
-            if (!phoneState.tasks[task] || phoneState.tasks[task].packageName != phoneState.form.packageName) {
+            if (!phoneState.tasks[task])  {
+                delete phoneState.tasks[task];
+                continue;
+            }
+            // Check if they are same App
+            var taskPackage = phoneState.tasks[task].packageName;
+            var taskAppPackage = taskPackage.substring(0, taskPackage.lastIndexOf("."));
+            var formPackage = phoneState.form.packageName;
+            var formAppPackage = formPackage.substring(0, formPackage.lastIndexOf("."));
+            if (taskAppPackage != formAppPackage) {
                 delete phoneState.tasks[task];
                 continue;
             }
@@ -134,14 +151,17 @@ Blockly.ReplMgr.buildYail = function() {
             }
         }
     }
+    console.log("1.3 called buildYail of " + Blockly.BlocklyEditor.contextName);
     // Only build yail for current screen and all valid tasks
     if (!jsonObject) {
         return
     }
+    console.log("2 called buildYail of " + Blockly.BlocklyEditor.contextName);
     var contextProperties;
     if (jsonObject.Properties) {
         contextProperties = jsonObject.Properties;
     }
+    console.log("3 called buildYail of " + Blockly.BlocklyEditor.contextName);
 
     var componentMap = Blockly.Component.buildComponentMap([], [], false, false);
     var componentNames = [];
@@ -242,12 +262,18 @@ Blockly.ReplMgr.buildYail = function() {
 };
 
 Blockly.ReplMgr.sendFormData = function(formName, formJson, packageName) {
-    console.log("sendFormData : " + Blockly.BlocklyEditor.contextName);
+    console.log("sendFormData : " + Blockly.ReplMgr.contextName);
     var phoneState = window.parent.ReplState.phoneState;
+    if (!phoneState) {
+        phoneState = {
+            form: {},
+            tasks: {}
+        }
+    }
     if (!phoneState.form) {
         phoneState.form = {};
     }
-    phoneState.form.name = Blockly.BlocklyEditor.contextName;
+    phoneState.form.name = Blockly.ReplMgr.contextName;
     phoneState.form.json = formJson;
     phoneState.form.packageName = packageName;
     var context = this;
@@ -277,13 +303,19 @@ Blockly.ReplMgr.sendFormData = function(formName, formJson, packageName) {
 };
 
 Blockly.ReplMgr.sendTaskData = function(taskName, taskJson, packageName) {
-    console.log("sendTaskData : " + Blockly.BlocklyEditor.contextName);
+    console.log("sendTaskData : " + Blockly.ReplMgr.contextName);
     var phoneState = window.parent.ReplState.phoneState;
+    if (!phoneState) {
+        phoneState = {
+            form: {},
+            tasks: {}
+        };
+    }
     if (!phoneState.tasks) {
         phoneState.tasks = {};
     }
-    phoneState.tasks[Blockly.BlocklyEditor.contextName] = {
-        'name' : Blockly.BlocklyEditor.contextName,
+    phoneState.tasks[Blockly.ReplMgr.contextName] = {
+        'name' : Blockly.ReplMgr.contextName,
         'json' : taskJson,
         'packageName' : packageName
     };
@@ -301,7 +333,7 @@ Blockly.ReplMgr.sendTaskData = function(taskName, taskJson, packageName) {
 Blockly.ReplMgr.RefreshAssets = null;
 
 Blockly.ReplMgr.pollYail = function() {
-    console.log("called pollYail of " + Blockly.BlocklyEditor.contextName);
+    console.log("called pollYail of " + Blockly.ReplMgr.contextName);
     try {
         if (window === undefined)    // If window is gone, then we are a zombie timer firing
             return;                  // in a destroyed frame.
@@ -327,7 +359,11 @@ Blockly.ReplMgr.resetYail = function(partial) {
     window.parent.ReplState.phoneState.initialized = false; // so running io stops
     this.putYail.reset();
     if (!partial) {
-        window.parent.ReplState.phoneState = { "phoneQueue" : {}};
+        window.parent.ReplState.phoneState = {
+         "form" : {},
+         "tasks" : {},
+         "phoneQueue" : {}
+         };
     }
 };
 
@@ -1105,7 +1141,10 @@ Blockly.ReplMgr.startAdbDevice = function(rs, usb) {
             progdialog.hide();
             rs.state = context.rsState.CONNECTED; // Indicate that we are good to go!
             clearInterval(interval);
+            console.log("called replMgrConnected" + context.fullContextName);
+            window.parent.BlocklyPanel_ReplMgrConnected(context.fullContextName);
             window.parent.BlocklyPanel_blocklyWorkspaceChanged(context.fullContextName);
+            window.parent.BlocklyPanel_ReplMgrConnected(context.fullContextName);
         }
     };
     interval = setInterval(mainloop, 1000); // Once per second
@@ -1216,7 +1255,9 @@ Blockly.ReplMgr.getFromRendezvous = function() {
                    throw "Assets not Transferred"; // throw error if assets transfer is incomplete
                 }
                 rs.state = Blockly.ReplMgr.rsState.CONNECTED;
+                console.log("called replMgrConnected" + context.fullContextName);
                 window.parent.BlocklyPanel_blocklyWorkspaceChanged(context.fullContextName);
+                window.parent.BlocklyPanel_ReplMgrConnected(context.fullContextName);
                 // Start the connection with the Repl itself
             } catch (err) {
                 console.log("getFromRendezvous(): Error: " + err);

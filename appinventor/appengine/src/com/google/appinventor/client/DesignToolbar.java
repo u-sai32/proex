@@ -52,12 +52,12 @@ public class DesignToolbar extends Toolbar {
   public static class Context {
     public final String contextName;
     public final YaContextEditor contextEditor;
-    public final FileEditor blocksEditor;
+    public final YaBlocksEditor blocksEditor;
 
     public Context(String name, FileEditor contextEditor, FileEditor blocksEditor) {
       this.contextName = name;
       this.contextEditor = (YaContextEditor) contextEditor;
-      this.blocksEditor = blocksEditor;
+      this.blocksEditor = (YaBlocksEditor) blocksEditor;
     }
   }
 
@@ -95,7 +95,7 @@ public class DesignToolbar extends Toolbar {
     }
 
     public ArrayList<Context> getTasks() {
-      ArrayList<Context> tasks = new ArrayList<>();
+      ArrayList<Context> tasks = new ArrayList<Context>();
       for (Context task : this.tasks.values()) {
         tasks.add(task);
       }

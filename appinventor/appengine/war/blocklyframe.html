@@ -63,6 +63,8 @@
         }
         window.parent.Blocklies[fullContextName] = Blockly;
         Blockly.ReplMgr.fullContextName = fullContextName; <!-- So we can tell the AssetManager which form we are on. -->
+        Blockly.ReplMgr.contextName = fullContextName.substr(fullContextName.indexOf("_") + 1);
+        Blockly.Yail.contextName = Blockly.ReplMgr.contextName;
         if (window.parent.ReplState === undefined) {
           window.parent.ReplState = new Blockly.ReplStateObj(); // There should be one of these for the whole system
         }

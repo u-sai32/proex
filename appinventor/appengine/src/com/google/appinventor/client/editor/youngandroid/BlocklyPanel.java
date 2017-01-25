@@ -229,6 +229,20 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     }
   }
 
+  private static void replMgrConnected(String contextName) {
+    LoadStatus loadStat = loadStatusMap.get(contextName);
+    // ignore workspaceChanged events until after the load finishes.
+    if (loadStat == null || !loadStat.complete) {
+      return;
+    }
+    if (loadStat.error) {
+      YaBlocksEditor.setBlocksDamaged(contextName);
+      ErrorReporter.reportError(MESSAGES.blocksNotSaved(contextName));
+    } else {
+      YaBlocksEditor.onReplMgrConnected(contextName);
+    }
+  }
+
   // Returns true if the blocks for formName have been initialized (i.e.,
   // no componentOps entry exists for formName).
   public static boolean blocksInited(String formName) {
@@ -884,6 +898,8 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
         $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::initBlocksArea(Ljava/lang/String;));
     $wnd.BlocklyPanel_blocklyWorkspaceChanged =
         $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::blocklyWorkspaceChanged(Ljava/lang/String;));
+    $wnd.BlocklyPanel_ReplMgrConnected =
+        $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::replMgrConnected(Ljava/lang/String;));
     $wnd.BlocklyPanel_switchLanguage =
         $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::switchLanguage(Ljava/lang/String;Ljava/lang/String;));
     $wnd.BlocklyPanel_checkWarningState =

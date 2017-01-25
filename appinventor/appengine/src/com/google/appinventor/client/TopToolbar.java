@@ -885,11 +885,11 @@ public class TopToolbar extends Composite {
             + "Ignoring attempt to start the repl.");
       return;
     }
-    // We need to startRepl for all tasks and the last opened screen
-    // Look for all tasks
-    for (DesignToolbar.Context task : currentProject.getTasks()) {
-      task.blocksEditor.startRepl(!start, forEmulator, forUsb);
-    }
+//    // We need to startRepl for all tasks and the last opened screen
+//    // Look for all tasks
+//    for (DesignToolbar.Context task : currentProject.getTasks()) {
+//      task.blocksEditor.sendComponentData();
+//    }
     // Look for the last opened Screen
     DesignToolbar.Context lastScreen = currentProject.getContext(currentProject.lastScreen);
     lastScreen.blocksEditor.startRepl(!start, forEmulator, forUsb);
