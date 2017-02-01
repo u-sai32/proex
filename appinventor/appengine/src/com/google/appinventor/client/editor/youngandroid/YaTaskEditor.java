@@ -627,7 +627,7 @@ public final class YaTaskEditor extends YaContextEditor implements FormChangeLis
   private void updatePhone() {
     YaProjectEditor yaProjectEditor = (YaProjectEditor) projectEditor;
     YaBlocksEditor blockEditor = yaProjectEditor.getBlocksFileEditor(taskNode.getContextName());
-    blockEditor.onBlocksAreaChanged(getProjectId() + "_" + taskNode.getContextName());
+    blockEditor.onBlocksAreaChanged(getProjectId() + "_" + taskNode.getContextName(), true);
   }
 
   @Override

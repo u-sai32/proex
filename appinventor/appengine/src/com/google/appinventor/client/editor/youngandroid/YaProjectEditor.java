@@ -74,6 +74,9 @@ public final class YaProjectEditor extends ProjectEditor implements ProjectChang
 
   // Maps context name -> editors for this context
   private final HashMap<String, EditorSet> editorMap = Maps.newHashMap();
+
+  // Last Screen Context
+  private EditorSet lastScreen;
   
   // List of External Components
   private final List<String> externalComponents = new ArrayList<String>();
@@ -216,9 +219,9 @@ public final class YaProjectEditor extends ProjectEditor implements ProjectChang
     DesignToolbar designToolbar = Ode.getInstance().getDesignToolbar();
     FileEditor selectedFileEditor = getSelectedFileEditor();
     if (selectedFileEditor != null) {
-      if (selectedFileEditor instanceof YaFormEditor) {
-        YaFormEditor formEditor = (YaFormEditor) selectedFileEditor;
-        designToolbar.switchToScreen(projectId, formEditor.getForm().getName(), 
+      if (selectedFileEditor instanceof YaContextEditor) {
+        YaContextEditor contextEditor = (YaContextEditor) selectedFileEditor;
+        designToolbar.switchToScreen(projectId, contextEditor.getContext().getName(),
             DesignToolbar.View.CONTEXT);
       } else if (selectedFileEditor instanceof YaBlocksEditor) {
         YaBlocksEditor blocksEditor = (YaBlocksEditor) selectedFileEditor;

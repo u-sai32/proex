@@ -83,7 +83,7 @@ public class DesignToolbar extends Toolbar {
       currentContext = YoungAndroidSourceNode.SCREEN1_FORM_NAME;
       lastScreen = currentContext;
       // Let BlocklyPanel know which screen to send Yail for
-      BlocklyPanel.setCurrentForm(projectId + "_" + currentContext);
+//      BlocklyPanel.setCurrentForm(projectId + "_" + currentContext);
     }
 
     public Context getContext(String contextName) {
@@ -357,6 +357,7 @@ public class DesignToolbar extends Toolbar {
           " in project " + currentProject.name + ". Trying Screen1 instead.");
       if (currentProject.screens.containsKey(YoungAndroidSourceNode.SCREEN1_FORM_NAME)) {
         newScreenName = YoungAndroidSourceNode.SCREEN1_FORM_NAME;
+        isScreen = true;
       } else {
         // something went seriously wrong!
         ErrorReporter.reportError("Something is wrong. Can't find Screen1 for project "
@@ -370,7 +371,7 @@ public class DesignToolbar extends Toolbar {
       ProjectEditor projectEditor = screen.contextEditor.getProjectEditor();
       currentProject.setCurrentContext(newScreenName);
       setDropDownButtonCaption(WIDGET_NAME_SCREENS_DROPDOWN, newScreenName);
-      OdeLog.log("Setting currentContext to " + newScreenName);
+      BlocklyPanel.setProjectLastForm(projectId, newScreenName);
       if (currentView == View.CONTEXT) {
         projectEditor.selectFileEditor(screen.contextEditor);
         toggleEditor(false);
@@ -385,7 +386,6 @@ public class DesignToolbar extends Toolbar {
       ProjectEditor projectEditor = task.contextEditor.getProjectEditor();
       currentProject.setCurrentContext(newScreenName);
       setDropDownButtonCaption(WIDGET_NAME_SCREENS_DROPDOWN, newScreenName);
-      OdeLog.log("Setting currentContext to " + newScreenName);
       if (currentView == View.CONTEXT) {
         projectEditor.selectFileEditor(task.contextEditor);
         toggleEditor(false);
@@ -397,7 +397,9 @@ public class DesignToolbar extends Toolbar {
       }
     }
     // Inform the Blockly Panel which project/screen (aka form) we are working on
-    BlocklyPanel.setCurrentForm(projectId + "_" + newScreenName);
+    OdeLog.log("Setting currentContext to " + newScreenName);
+    BlocklyPanel.setCurrentContext(projectId + "_" + newScreenName);
+
   }
 
   private class SwitchToBlocksEditorAction implements Command {

@@ -324,24 +324,32 @@ public final class YaBlocksEditor extends FileEditor
 
 
 
-  public static void onBlocksAreaChanged(String formName) {
+  public static void onBlocksAreaChanged(String formName, boolean sendRelated) {
     YaBlocksEditor editor = contextToBlocksEditor.get(formName);
     if (editor != null) {
       OdeLog.log("Got blocks area changed for " + formName);
       Ode.getInstance().getEditorManager().scheduleAutoSave(editor);
-      if (editor instanceof YaBlocksEditor)
-        editor.sendComponentData();
+      if (editor instanceof YaBlocksEditor) {
+        if (sendRelated)
+          editor.sendRelatedComponentData();
+        else
+          editor.sendComponentData();
+      }
     }
   }
 
-  public static void onReplMgrConnected(String contextName) {
-    YaBlocksEditor editor = contextToBlocksEditor.get(contextName);
-    if (editor != null) {
-      OdeLog.log("Got blocks area replMgrConnected for " + contextName);
-      Ode.getInstance().getEditorManager().scheduleAutoSave(editor);
-      if (editor instanceof YaBlocksEditor)
-        editor.replMgrConnected();
+  public synchronized void sendRelatedComponentData() {
+
+    // Send All Tasks Component Data
+    YaProjectEditor projectEditor = (YaProjectEditor) this.projectEditor;
+    ArrayList<YaBlocksEditor> taskBlocksEditors = projectEditor.getAllTaskBlocksEditors();
+    for (YaBlocksEditor blocksEditor : taskBlocksEditors) {
+      blocksEditor.sendComponentData();
     }
+    String formName = BlocklyPanel.getProjectLastForm(this.getProjectId());
+    YaBlocksEditor lastFormBlocksEditor = projectEditor.getBlocksFileEditor(formName);
+    lastFormBlocksEditor.sendComponentData();
+
 
   }
 
@@ -359,12 +367,15 @@ public final class YaBlocksEditor extends FileEditor
       this.sendComponentData();
       return;
     }
-    // get All Tasks Blocks Editors
+    // Send All Tasks Component Data
     YaProjectEditor projectEditor = (YaProjectEditor) this.projectEditor;
     ArrayList<YaBlocksEditor> taskBlocksEditors = projectEditor.getAllTaskBlocksEditors();
     for (YaBlocksEditor blocksEditor : taskBlocksEditors) {
       blocksEditor.sendComponentData();
     }
+    // Send Screen Component Data
+    this.sendComponentData();
+    return;
   }
 
   private void updateBlocksTree(MockContext context, SourceStructureExplorerItem itemToSelect) {

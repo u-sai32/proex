@@ -53,8 +53,8 @@ import static com.google.appinventor.client.Ode.MESSAGES;
 public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeListener{
   public static enum OpType {ADD, REMOVE, RENAME}
 
-  // The currently displayed form (project/screen)
-  private static String currentForm;
+  // The currently displayed context (project_context)
+  private static String currentContext;
   private static String languageSetting;
 
   private static class ComponentOp {
@@ -120,6 +120,10 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
 
   // Status of blocks loading, indexed by form name.
   private static final Map<String, LoadStatus> loadStatusMap = Maps.newHashMap();
+
+  // Map from a Project Id to the last opened Form for that Project.
+  // This is used while sending relatedComponentData for Yail
+  private static final Map<String, String> lastFormMap = Maps.newHashMap();
 
   // Blockly backpack
   private static String backpack = "[]";
@@ -215,7 +219,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     }
   }
 
-  private static void blocklyWorkspaceChanged(String formName) {
+  private static void blocklyWorkspaceChanged(String formName, boolean sendRelated) {
     LoadStatus loadStat = loadStatusMap.get(formName);
     // ignore workspaceChanged events until after the load finishes.
     if (loadStat == null || !loadStat.complete) {
@@ -225,21 +229,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
       YaBlocksEditor.setBlocksDamaged(formName);
       ErrorReporter.reportError(MESSAGES.blocksNotSaved(formName));
     } else {
-      YaBlocksEditor.onBlocksAreaChanged(formName);
-    }
-  }
-
-  private static void replMgrConnected(String contextName) {
-    LoadStatus loadStat = loadStatusMap.get(contextName);
-    // ignore workspaceChanged events until after the load finishes.
-    if (loadStat == null || !loadStat.complete) {
-      return;
-    }
-    if (loadStat.error) {
-      YaBlocksEditor.setBlocksDamaged(contextName);
-      ErrorReporter.reportError(MESSAGES.blocksNotSaved(contextName));
-    } else {
-      YaBlocksEditor.onReplMgrConnected(contextName);
+      YaBlocksEditor.onBlocksAreaChanged(formName, sendRelated);
     }
   }
 
@@ -624,8 +614,8 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * @throws YailGenerationException if there was a problem generating the Yail
    */
   public void sendComponentData(String formJson, String packageName) throws YailGenerationException {
-    if (myBlocksEditor.isFormBlocksEditor() && !currentForm.equals(formName)) { // Not working on the current form...
-      OdeLog.log("Not working on " + currentForm + " (while sending for " + formName + ")");
+    if (myBlocksEditor.isFormBlocksEditor() && !currentContext.equals(formName)) { // Not working on the current form...
+      OdeLog.log("Not working on " + currentContext + " (while sending for " + formName + ")");
       return;
     }
     if (!blocksInited(formName)) {
@@ -649,12 +639,12 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     if (!formName.equals(newFormName))
       doResetYail(formName);
     formName = newFormName;
-    blocklyWorkspaceChanged(formName);
+    blocklyWorkspaceChanged(formName, true);
   }
 
   public void showTask(String taskName) {
     doResetYail(taskName);
-    blocklyWorkspaceChanged(taskName);
+    blocklyWorkspaceChanged(taskName, true);
   }
 
   public void startRepl(boolean alreadyRunning, boolean forEmulator, boolean forUsb) { // Start the Repl
@@ -676,10 +666,18 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   // Set currentScreen
   // We use this to determine if we should send Yail to a
   // a connected device.
-  public static void setCurrentForm(String formName) {
-    currentForm = formName;
-    if (blocksInited(formName))
-      blocklyWorkspaceChanged(formName); // Update the device now if the blocks are ready.
+  public static void setCurrentContext(String contextName) {
+    currentContext = contextName;
+    if (blocksInited(contextName))
+      blocklyWorkspaceChanged(contextName, true); // Update the device now if the blocks are ready.
+  }
+
+  public static void setProjectLastForm(long projectId, String formName) {
+    BlocklyPanel.lastFormMap.put(Long.toString(projectId), formName);
+  }
+
+  public static String getProjectLastForm(long projectId) {
+      return BlocklyPanel.lastFormMap.get(Long.toString(projectId));
   }
 
   public static void indicateDisconnect() {
@@ -795,10 +793,10 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   }
 
   public static String getQRCode(String inString) {
-    if (currentForm == null) {  // Cannot build a QR code without a current form
+    if (currentContext == null) {  // Cannot build a QR code without a current form
       return "";                // This only happens when you have no projects
     }
-    return doQRCode(currentForm, inString);
+    return doQRCode(currentContext, inString);
   }
 
   /**
@@ -897,9 +895,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     $wnd.BlocklyPanel_initBlocksArea =
         $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::initBlocksArea(Ljava/lang/String;));
     $wnd.BlocklyPanel_blocklyWorkspaceChanged =
-        $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::blocklyWorkspaceChanged(Ljava/lang/String;));
-    $wnd.BlocklyPanel_ReplMgrConnected =
-        $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::replMgrConnected(Ljava/lang/String;));
+        $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::blocklyWorkspaceChanged(Ljava/lang/String;Z));
     $wnd.BlocklyPanel_switchLanguage =
         $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::switchLanguage(Ljava/lang/String;Ljava/lang/String;));
     $wnd.BlocklyPanel_checkWarningState =

@@ -667,7 +667,7 @@ public final class YaFormEditor extends YaContextEditor implements FormChangeLis
   private void updatePhone() {
     YaProjectEditor yaProjectEditor = (YaProjectEditor) projectEditor;
     YaBlocksEditor blockEditor = yaProjectEditor.getBlocksFileEditor(formNode.getContextName());
-    blockEditor.onBlocksAreaChanged(getProjectId() + "_" + formNode.getContextName());
+    blockEditor.onBlocksAreaChanged(getProjectId() + "_" + formNode.getContextName(), true);
   }
 
   private void addComponentDatabaseChangeListener(ComponentDatabaseChangeListener cdbChangeListener) {
