@@ -65,6 +65,7 @@ Blockly.ReplStateObj.prototype = {
     'rendezvouscode' : null,            // Code used for Rendezvous (hash of replcode)
     'dialog' : null,                    // The Dialog Box with the code and QR Code
     'count' : 0,                        // Count of number of reads from rendezvous server
+    'doingversioncheck' : false,
     'didversioncheck' : false
 };
 
@@ -208,7 +209,7 @@ Blockly.ReplMgr.buildYail = function() {
                 phoneState.form.blocksYail[block.id] = tempyail;
             }
         } else if (sourceType == "Task") {
-            if (!phoneState.tasks[contextName] || phoneState.tasks[contextName].blockYail[block.id] != tempyail) {
+            if (!phoneState.tasks[contextName] || phoneState.tasks[contextName].blocksYail[block.id] != tempyail) {
                 this.putYail(contextInfo, tempyail, block, success, failure);
                 phoneState.tasks[contextName].blocksYail[block.id] = tempyail;
             }
@@ -425,11 +426,12 @@ Blockly.ReplMgr.putYail = (function() {
         'pollphone' : function() {
             console.log("pollphone by " + Blockly.ReplMgr.contextName);
             if (!rs.didversioncheck) {
-                if (context.phoneContextState.type == "Form") {
+                if (!rs.doingversioncheck) {
+                    rs.doingversioncheck = true;
                     engine.doversioncheck();
-                } else if (context.phoneContextState.type == "Task") {
-                    setTimeout(engine.pollphone, 2000); // Try after 2 seconds
+                    return;
                 }
+                setTimeout(engine.pollphone, 2000); // Try after 2 seconds
                 return;
             }
             console.log("1.2 pollphone by " + Blockly.ReplMgr.contextName);
@@ -444,6 +446,7 @@ Blockly.ReplMgr.putYail = (function() {
                 for (var task in phoneState.tasks) {
                     if (task.app != context.app) continue;
                     if (phoneState.tasks[task].ioRunning || phoneState.phoneQueue[task].length) { // Our Tasks are yet to be sent
+                        console.log("blocking Task: " + task );
                         setTimeout(engine.pollphone, 1000); // Try after a second
                         return;
                     }
@@ -628,6 +631,7 @@ Blockly.ReplMgr.putYail = (function() {
                 if (this.readyState == 4 && this.status == 200) {
                     // TODO : We want to do a version check for Pre Services Companion?
                     rs.didversioncheck = true;
+                    rs.doingversioncheck = false;
                     if (this.response[0] != "{") {
                         engine.checkversionupgrade(true, "", true); // Old Companion
                         engine.resetcompanion();
@@ -666,7 +670,7 @@ Blockly.ReplMgr.putYail = (function() {
                     //context.resetYail(true, true); // Reset (partial reset, all context)
                     //rs.phoneState.phoneQueue = {} // But flush the queue of pending code
                     //context.pollYail();  // Regenerate
-                    //engine.pollphone();  // Next...
+                    engine.pollphone();  // Next...
                     return;
                 }
                 if (this.readyState == 4) { // Old Companion, doesn't do CORS so we fail to talk to it
@@ -715,6 +719,7 @@ Blockly.ReplMgr.putYail = (function() {
 //   button.
 //          context.hardreset(context.fullContextName); // kill adb and emulator
             rs.didversioncheck = false;
+            rs.doingversioncheck = false;
             window.parent.BlocklyPanel_indicateDisconnect();
         },
         "checkversionupgrade" : function(fatal, installer, force) {
@@ -799,6 +804,7 @@ Blockly.ReplMgr.triggerUpdate = function() {
         rs.state = Blockly.ReplMgr.rsState.IDLE;
         rs.connection = null;
         rs.didversioncheck = false;
+        rs.doingversioncheck = false;
         context.resetYail(false, true);
         top.BlocklyPanel_indicateDisconnect();
         // End reset companion state
@@ -1202,6 +1208,7 @@ Blockly.ReplMgr.quoteUnicode = function(input) {
 Blockly.ReplMgr.startRepl = function(already, emulator, usb) {
     var rs = window.parent.ReplState;
     rs.didversioncheck = false; // Re-check
+    rs.doingversioncheck = false;
     if (rs.phoneState) {
         rs.phoneState.initialized = false; // Make sure we re-send the yail to the Companion
     }
