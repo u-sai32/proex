@@ -303,18 +303,6 @@
                                 (lookup-in-context-environment context component-name)))
             component-names))
 
-(define *init-thunk-environment* (gnu.mapping.Environment:make 'init-thunk-environment))
-
-(define (add-init-thunk component-name thunk)
-  (gnu.mapping.Environment:put *init-thunk-environment* component-name thunk))
-
-(define (get-init-thunk component-name)
-  (and (gnu.mapping.Environment:isBound *init-thunk-environment* component-name)
-       (gnu.mapping.Environment:get *init-thunk-environment* component-name)))
-
-(define (clear-init-thunks)
-  (set! *init-thunk-environment* (gnu.mapping.Environment:make 'init-thunk-environment)))
-
 ;;; (get-component comp1)
 ;;; ==> (lookup-in-current-form-environment 'comp1)
 (define-syntax get-component
@@ -773,7 +761,7 @@
        (define (android-log-task message)
          (when *debug-task* (android.util.Log:i "YAIL-TASK" message)))
 
-       ;; An environment containing the form's components, functions and event handlers
+       ;; An environment containing the task's components, functions and event handlers
        ;; We're using Kawa Environments here mostly as just a convenient dictionary implementation.
        ;; As noted near the top of this file it is useful for attaching the environment to the REPL.
        (define task-environment :: gnu.mapping.Environment
@@ -842,7 +830,7 @@
                      global-vars-to-create)))
 
 
-       ;; List of expressions to evaluate after the form has been created.
+       ;; List of expressions to evaluate after the task has been created.
        ;; Used for setting properties
        (define task-do-after-creation  :: gnu.lists.LList '())
 
@@ -1168,9 +1156,9 @@
         (begin (set-repl-task) ;;redo
                (add-to-context-environments context (gnu.mapping.Environment:make (symbol->string context)))
                (add-to-context-environment context context *this-task* )
-
                (add-to-context-global-var-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-global-vars"))))
                (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks"))))
+
         (begin (add-to-context-environments context (*:.task-environment *this-task* ) )
                (add-to-context-environment context context *this-task*)
                (add-to-context-global-var-environments context (*:.global-var-environment *this-task*))))
@@ -1263,6 +1251,10 @@
         (set! *test-environment* (gnu.mapping.Environment:make 'test-env))
         (*:addParent (KawaEnvironment:getCurrent) *test-environment*)
         (set! *test-global-var-environment* (gnu.mapping.Environment:make 'test-global-var-env)))))
+
+(define (reset-task-environment)
+  (android-log (format #f "reset task called: ~A" task)))
+
 
 (define-syntax foreach
   (syntax-rules ()
@@ -2991,11 +2983,13 @@ list, use the make-yail-list constructor with no arguments.
 
 (define (clear-current-form)
   (when (not (eq? *this-form* #!null))
-    (clear-init-thunks)
     ;; TODO(sharon): also need to unregister any previously registered events
     (reset-current-form-environment)
     (com.google.appinventor.components.runtime.EventDispatcher:unregisterAllEventsForDelegation)
     (*:clear *this-form*)))
+
+(define (clear-task task)
+  (android-log (format #f "clear task called: ~A" task)))
 
 ;; Used by the repl to set the name of the form
 (define (set-form-name form-name)

@@ -128,7 +128,6 @@ public class Task extends Service
 
   @Override
   public void onCreate() {
-    super.onCreate();
 
     String className = getClass().getName();
     int lastDot = className.lastIndexOf('.');
@@ -139,18 +138,26 @@ public class Task extends Service
 
     taskMap.put(taskName, this);
 
-    if (Thread.currentThread() == Looper.getMainLooper().getThread()) {
-      Log.d(LOG_TAG, "Task " + taskName + " same Thread as Main UI" + Thread.currentThread() );
-    }
-    else {
-      Log.d(LOG_TAG, "Task " + taskName + "thread not main UI thread" + Thread.currentThread() );
-    }
+    Runnable initialize = new Runnable() {
+      @Override
+      public void run() {
+
+        if (Thread.currentThread() == Looper.getMainLooper().getThread()) {
+          Log.d(LOG_TAG, "Task " + taskName + " same Thread as Main UI" + Thread.currentThread() );
+        }
+        else {
+          Log.d(LOG_TAG, "Task " + taskName + "thread not main UI thread" + Thread.currentThread() );
+        }
+
+        $define();
+
+        Initialize();
+      }
+    };
+
+    taskThread.getTaskHandler().post(initialize);
 
 
-
-    $define();
-
-    Initialize();
   }
 
   @Override
@@ -171,9 +178,15 @@ public class Task extends Service
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d("Task", "Task onStartCommand Called");
-    String startValue = intent.getStringExtra(Form.SERVICE_ARG);
-    Object decodedStartVal = Form.decodeJSONStringForForm(startValue, "get start value");
-    TaskStarted(decodedStartVal);
+    Runnable command = new Runnable() {
+      @Override
+      public void run() {
+        String startValue = intent.getStringExtra(Form.SERVICE_ARG);
+        Object decodedStartVal = Form.decodeJSONStringForForm(startValue, "get start value");
+        TaskStarted(decodedStartVal);
+      }
+    };
+    taskThread.getTaskHandler().post(command);
     Log.d("Task", "Done Dispatch but not Returned");
     return START_STICKY;
   }

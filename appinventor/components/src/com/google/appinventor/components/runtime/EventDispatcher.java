@@ -75,7 +75,7 @@ public class EventDispatcher {
     }
   }
 
-  private static final boolean DEBUG = false;
+  private static final boolean DEBUG = true;
 
   private static final Map<HandlesEventDispatching, EventRegistry>
       mapDispatchDelegateToEventRegistry = new HashMap<HandlesEventDispatching, EventRegistry>();
