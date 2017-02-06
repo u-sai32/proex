@@ -650,7 +650,7 @@ public class Form extends Activity
     Log.i(LOG_TAG, "Form " + formName + " got onDestroy");
 
     // Unregister events for components in this form.
-    EventDispatcher.removeDispatchDelegate(this);
+    EventDispatcher.removeDispatchContext(this.getDispatchContext());
 
     for (OnDestroyListener onDestroyListener : onDestroyListeners) {
       onDestroyListener.onDestroy();
@@ -729,6 +729,11 @@ public class Form extends Activity
   public boolean dispatchEvent(Component component, String componentName, String eventName,
       Object[] args) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public String getDispatchContext() {
+    return formName;
   }
 
 

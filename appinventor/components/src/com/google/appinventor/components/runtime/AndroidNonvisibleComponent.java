@@ -38,6 +38,10 @@ public abstract class AndroidNonvisibleComponent implements Component {
 
   @Override
   public HandlesEventDispatching getDispatchDelegate() {
-    return form;
+    if (form != null)
+      return form.getDispatchDelegate();
+    if (task != null)
+      return task.getDispatchDelegate();
+    return null;
   }
 }

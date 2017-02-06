@@ -30,7 +30,6 @@ import android.content.Context;
 
 public class ReplTask extends Task {
 
-
   protected static Task replTask = null;
   private static final String LOG_TAG = "ReplTask";
   private boolean assetsLoaded = true;
@@ -111,6 +110,11 @@ public class ReplTask extends Task {
     }
     else Log.d(LOG_TAG, "replTask is VALID yet");
     return replTask;
+  }
+
+  @Override
+  public String getDispatchContext() {
+    return Thread.currentThread().getName();
   }
 
 

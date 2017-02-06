@@ -289,6 +289,7 @@
 (define-alias AndroidLooper <android.os.Looper>)
 (define-alias SimpleForm <com.google.appinventor.components.runtime.Form>)
 (define-alias SimpleTask <com.google.appinventor.components.runtime.Task>)
+(define-alias SimpleTaskThread <com.google.appinventor.components.runtime.Task$TaskThread>)
 (define-alias SimpleReplTask <com.google.appinventor.components.runtime.ReplTask>)
 
 (define (call-Initialize-of-components context . component-names)
@@ -616,7 +617,7 @@
                      ;; else unregister event for registeredComponentName
                      (begin
                        (com.google.appinventor.components.runtime.EventDispatcher:unregisterEventForDelegation
-                         (as com.google.appinventor.components.runtime.HandlesEventDispatching (this))
+                         (symbol->string form-name-symbol)
                          registeredComponentName eventName)
                        #f))))
 
@@ -637,7 +638,7 @@
            (for-each (lambda (event-info)
                        ;; Tell the Simple event dispatcher to delegate dispatching of this event to this class
                        (SimpleEventDispatcher:registerEventForDelegation
-                        (as com.google.appinventor.components.runtime.HandlesEventDispatching (this))
+                        (symbol->string form-name-symbol)
                         (car event-info)
                         (cdr event-info)))
                      events))
@@ -724,6 +725,7 @@
             ;; to represent an uninitialized value
             ;; We have to explicity write #!null here, rather than
             ;; *the-null-value* because that external defintion hasn't happened yet
+            (android-log-form "adding *the-null-value*")
             (add-to-global-vars '*the-null-value* (lambda () #!null))
             ;; These next three clauses need to be in this order:
             ;; Properties can't be set until after the global variables are
@@ -773,13 +775,17 @@
          (gnu.mapping.Environment:put task-environment name object))
 
        (define (lookup-in-task-environment name :: gnu.mapping.Symbol #!optional (default-value #f))
-         (if (and (not (eq? task-environment #!null))
-                  (gnu.mapping.Environment:isBound task-environment name))
-             (gnu.mapping.Environment:get task-environment name)
-             default-value))
+         (if *this-is-the-repl*
+             (lookup-in-context-environment (get-current-context-symbol) name default-value)
+             (if (and (not (eq? task-environment #!null))
+                      (gnu.mapping.Environment:isBound task-environment name))
+                 (gnu.mapping.Environment:get task-environment name)
+                 default-value)))
 
        (define (is-bound-in-task-environment name :: gnu.mapping.Symbol)
-         (gnu.mapping.Environment:isBound task-environment name))
+         (if *this-is-the-repl*
+             (is-bound-in-context-environment (get-current-context-symbol) name)
+             (gnu.mapping.Environment:isBound task-environment name)))
 
        (define global-var-environment :: gnu.mapping.Environment
          (gnu.mapping.Environment:make (string-append
@@ -789,6 +795,7 @@
        (define (add-to-global-var-environment name :: gnu.mapping.Symbol object)
          (android-log-task (format #f "Adding ~A to env ~A with value ~A" name global-var-environment object))
          (gnu.mapping.Environment:put global-var-environment name object))
+
 
        ;; Simple wants there to be a variable named the same as the class.  It will
        ;; later get initialized to an instance of the class.
@@ -879,7 +886,7 @@
                      ;; else unregister event for registeredComponentName
                      (begin
                        (com.google.appinventor.components.runtime.EventDispatcher:unregisterEventForDelegation
-                         (as com.google.appinventor.components.runtime.HandlesEventDispatching (this))
+                         (symbol->string task-name-symbol)
                          registeredComponentName eventName)
                        #f)))))
 
@@ -900,7 +907,7 @@
            (for-each (lambda (event-info)
                        ;; Tell the Simple event dispatcher to delegate dispatching of this event to this class
                        (SimpleEventDispatcher:registerEventForDelegation
-                        (as com.google.appinventor.components.runtime.HandlesEventDispatching (this))
+                        (symbol->string task-name-symbol)
                         (car event-info)
                         (cdr event-info)))
                      events))
@@ -987,6 +994,7 @@
             ;; to represent an uninitialized value
             ;; We have to explicity write #!null here, rather than
             ;; *the-null-value* because that external defintion hasn't happened yet
+            (android-log-task "adding *the-null-value*")
             (add-to-global-vars '*the-null-value* (lambda () #!null))
             ;; These next three clauses need to be in this order:
             ;; Properties can't be set until after the global variables are
@@ -1082,7 +1090,7 @@
            ;; might be easier for people coming back to the code later.
            (if *this-is-the-repl*
                (com.google.appinventor.components.runtime.EventDispatcher:registerEventForDelegation
-                (as com.google.appinventor.components.runtime.HandlesEventDispatching (get-context-instance 'context))
+                (get-current-context-name)
                 'component-name
                 'event-name)
                ;; If it's not the REPL the form's $define() method will do the registration
@@ -3016,9 +3024,6 @@ list, use the make-yail-list constructor with no arguments.
 (define *this-task* #!null)
 (define *repl-task* #!null)
 
-;;; *current-context* :  is the symbol name of the context being processed by repl or the compiled context
-(define *current-context* :: gnu.mapping.Symbol #!null)
-
 
 ;;; This is called as part of the code that sets up the form in the phone application.
 ;;; It is not explicitly called when the Repl is started. But set-up-repl-environment
@@ -3051,7 +3056,7 @@ list, use the make-yail-list constructor with no arguments.
     #f))
 
 (define (is-current-context-task) :: boolean
-  (if (instance? (java.lang.Thread:currentThread) SimpleTask.TaskThread)
+  (if (instance? (java.lang.Thread:currentThread) SimpleTaskThread)
       #t
       #f))
 
@@ -3061,7 +3066,7 @@ list, use the make-yail-list constructor with no arguments.
             (let ((current-context (SimpleForm:getActiveForm)))
                 (current-context:getFormName)))
         ((is-current-context-task)
-            (java.lang.Thread:getName))))
+            (java.lang.Thread:getName (java.lang.Thread:currentThread)))))
 
 (define (get-current-context-symbol) :: <gnu.mapping.Symbol>
     (android-log (format "current context name is ~A" (get-current-context-name)) )

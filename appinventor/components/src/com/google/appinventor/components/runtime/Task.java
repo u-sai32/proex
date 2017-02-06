@@ -51,7 +51,7 @@ public class Task extends Service
   protected String taskName;
   protected int taskType;
 
-  protected class TaskHandler extends Handler {
+  public class TaskHandler extends Handler {
 
     protected TaskHandler(Looper looper) {
       super(looper);
@@ -64,7 +64,7 @@ public class Task extends Service
 
   }
 
-  protected class TaskThread extends HandlerThread {
+  public class TaskThread extends HandlerThread {
 
     protected TaskHandler taskHandler;
 
@@ -74,16 +74,19 @@ public class Task extends Service
     public TaskThread(Task task) {
       super(task.getTaskName());
       this.task = task;
+      this.start();
     }
 
     public TaskThread(Task task, int priority) {
       super(task.getTaskName(), priority);
       this.task = task;
+      this.start();
     }
 
     public TaskThread(String taskName, Task task) {
       super(taskName);
       this.task = task;
+      this.start();
     }
 
     @Override
@@ -176,7 +179,7 @@ public class Task extends Service
   }
 
   @Override
-  public int onStartCommand(Intent intent, int flags, int startId) {
+  public int onStartCommand(final Intent intent, int flags, int startId) {
     Log.d("Task", "Task onStartCommand Called");
     Runnable command = new Runnable() {
       @Override
@@ -238,7 +241,7 @@ public class Task extends Service
     Log.i(LOG_TAG, "Task " + taskName + " got onDestroy");
 
     // Unregister events for components in this form.
-    EventDispatcher.removeDispatchDelegate(this);
+    EventDispatcher.removeDispatchContext(this.getDispatchContext());
   }
 
   public void registerForOnDestroy(OnDestroyListener component) {
@@ -279,6 +282,11 @@ public class Task extends Service
   public boolean dispatchEvent(Component component, String componentName, String eventName,
                                Object[] args) {
     throw new UnsupportedOperationException();
+  }
+
+  @Override
+  public String getDispatchContext() {
+    return this.taskName;
   }
 
   /**
