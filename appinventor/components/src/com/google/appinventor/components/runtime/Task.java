@@ -15,6 +15,9 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
 import android.util.Log;
+
+import android.support.v4.content.LocalBroadcastManager;
+
 import com.google.appinventor.components.annotations.*;
 import com.google.appinventor.components.common.ComponentCategory;
 import com.google.appinventor.components.common.PropertyTypeConstants;
@@ -120,6 +123,7 @@ public class Task extends Service
 
   private TaskThread taskThread;
 
+  private LocalBroadcastManager localBroadcastManager;
 
   // Application lifecycle related fields
   private final Set<OnDestroyListener> onDestroyListeners = Sets.newHashSet();

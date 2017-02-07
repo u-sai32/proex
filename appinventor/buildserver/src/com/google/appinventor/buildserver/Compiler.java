@@ -113,6 +113,8 @@ public final class Compiler {
       RUNTIME_FILES_DIR + "acra-4.4.0.jar";
   private static final String ANDROID_RUNTIME =
       RUNTIME_FILES_DIR + "android.jar";
+  private static final String ANDROID_SUPPORT_V4_RUNTIME =
+          RUNTIME_FILES_DIR + "android-support-v4.jar";
   private static final String COMP_BUILD_INFO =
       RUNTIME_FILES_DIR + "simple_components_build_info.json";
   private static final String DX_JAR =
@@ -898,6 +900,10 @@ public final class Compiler {
 
       classpath +=
         getResource(ANDROID_RUNTIME);
+
+      classpath += COLON;
+      classpath +=
+              getResource(ANDROID_SUPPORT_V4_RUNTIME);
 
       System.out.println("Libraries Classpath = " + classpath);
 
