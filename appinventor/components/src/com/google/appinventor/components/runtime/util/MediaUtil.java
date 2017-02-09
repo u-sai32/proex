@@ -122,8 +122,11 @@ public class MediaUtil {
         return MediaSource.REPL_ASSET;
       else
         return MediaSource.ASSET;
-    } else if (context instanceof Context) {
+    } else if (context instanceof ReplTask) {
+      if (((ReplTask)context).isAssetsLoaded())
         return MediaSource.REPL_ASSET;
+      else
+          return MediaSource.ASSET;
     }
 
     return MediaSource.ASSET;

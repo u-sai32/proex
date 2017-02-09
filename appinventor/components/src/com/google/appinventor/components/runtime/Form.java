@@ -1577,7 +1577,7 @@ public class Form extends Activity
 
   @Override
   public Context $context() {
-    return this.getApplicationContext();
+    return this;
   }
 
   @Override

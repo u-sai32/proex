@@ -180,7 +180,6 @@ public class AppInvHTTPD extends NanoHTTPD {
       String contextType = "Form";
       String contextCode = "#f";
       String contextBlockId = "-2";
-      Log.d("AI2", "repl_input==" + repl_input);
       try {
         JSONObject replInput = new JSONObject(repl_input);
         contextName = replInput.getString("name");

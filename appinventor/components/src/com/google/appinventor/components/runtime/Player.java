@@ -182,7 +182,6 @@ public final class Player extends AndroidNonvisibleComponent
       player.setOnCompletionListener(this);
 
       try {
-        Log.d("AI2", "context is " + context.toString());
         MediaUtil.loadMediaPlayer(player, context, sourcePath);
 
       } catch (IOException e) {

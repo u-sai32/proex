@@ -166,6 +166,18 @@ public class EventDispatcher {
   }
 
   /**
+   * Removes all event closures previously registered via
+   * {@link EventDispatcher#registerEventForDelegation}.
+   */
+  // Don't delete this method. It's called from runtime.scm.
+  public static void unregisterAllEventsOfContext(String contextName) {
+    EventRegistry er = mapContextToEventRegistry.get(contextName);
+    if (er != null) {
+      er.eventClosuresMap.clear();
+    }
+  }
+
+  /**
    * Removes event handlers previously registered with the given
    * context and clears all references to the dispatchDelegate in
    * this class.
@@ -195,6 +207,7 @@ public class EventDispatcher {
     if (dispatchDelegate.canDispatchEvent(component, eventName)) {
       EventRegistry er = getEventRegistry(dispatchDelegate.getDispatchContext());
       Set<EventClosure> eventClosures = er.eventClosuresMap.get(eventName);
+      Log.d("EventDispatcher", "about to delegateDispatchEvent: " + er+ " closures: " + eventClosures);
       if (eventClosures != null && eventClosures.size() > 0) {
         dispatched = delegateDispatchEvent(dispatchDelegate, eventClosures, component, args);
       }
@@ -217,9 +230,9 @@ public class EventDispatcher {
     // only dispatch the event if the registered component matches the component that generated the
     // event.  This should only be true for one (or zero) of the closures.
     boolean dispatched = false;
-    Log.d("EventDispatcher", "delegateDispatchEvent called");
+    Log.d("EventDispatcher", "delegateDispatchEvent called : " + dispatchDelegate + " thread:" + Thread.currentThread());
     for (EventClosure eventClosure : eventClosures) {
-      Log.d("EventDispatcher", "event Closure hit");
+      Log.d("EventDispatcher", "event Closure hit: " + eventClosure.componentName + "." + eventClosure.eventName);
       if (dispatchDelegate.dispatchEvent(component,
                                          eventClosure.componentName,
                                          eventClosure.eventName,
