@@ -176,64 +176,46 @@ public class AppInvHTTPD extends NanoHTTPD {
         Response res = new Response(HTTP_OK, MIME_JSON, "{\"status\" : \"BAD\", \"message\" : \"Security Error: No HMAC Key\"}");
         return(res);
       }
-      String formName = "";
-      String formCode = "#f";
-      String formBlockId = "-2";
+      String contextName = "";
+      String contextType = "Form";
+      String contextCode = "#f";
+      String contextBlockId = "-2";
       Log.d("AI2", "repl_input==" + repl_input);
-      Map<String, String> taskCodes = new HashMap<String, String>();
-      Map<String, String> taskBlockIds = new HashMap<String, String>();
       try {
         JSONObject replInput = new JSONObject(repl_input);
-        JSONObject formInput = replInput.getJSONObject("form");
-        formName = formInput.getString("name");
-        formCode = formInput.getString("code");
-        formBlockId = formInput.getString("blockid");
-        JSONArray tasks = replInput.getJSONArray("tasks");
-        for (int i = 0; i < tasks.length(); ++i) {
-          JSONObject task = tasks.getJSONObject(i);
-          if (task.getString("code").equals("#f")) {
-            continue; // skip evaluation of "#f"
-          }
-          taskCodes.put(task.getString("name"), task.getString("code"));
-          taskBlockIds.put(task.getString("name"), task.getString("blockid"));
-        }
+        contextName = replInput.getString("name");
+        contextType = replInput.getString("type");
+        contextCode = replInput.getString("code");
+        contextBlockId = replInput.getString("blockid");
       } catch (JSONException e) {
         e.printStackTrace();
       }
-      String input_code = formCode;
-      for (String key :taskCodes.keySet()) {
-        taskCodes.put(key, "(begin (require <com.google.youngandroid.runtime>) (process-repl-task-input " + taskBlockIds.get(key) +
-                " (begin " + taskCodes.get(key) + " )))");
-        Log.d(LOG_TAG, "To Eval Task(" + key + "): " + taskCodes.get(key));
+      String input_code = contextCode;
+      if (contextType.equals("Form")) {
+        contextCode = "(begin (require <com.google.youngandroid.runtime>) (process-repl-form-input " + contextBlockId +
+                " (begin " +  contextCode + " )))";
+      } else if (contextType.equals("Task")) {
+        contextCode =  "(begin (require <com.google.youngandroid.runtime>) (process-repl-task-input " + contextBlockId +
+                " (begin " + contextCode + " )))";
       }
 
-      formCode = "(begin (require <com.google.youngandroid.runtime>) (process-repl-form-input " + formBlockId + " (begin " +
-        formCode + " )))";
-
-      Log.d(LOG_TAG, "To Eval: " + formCode);
+      Log.d(LOG_TAG, "To Eval: " + contextName + " [" + contextType + "] => " + contextCode);
 
       Response res;
-      Log.d(LOG_TAG, "Eval Thread Name : " + Thread.currentThread());
       form.loadComponents();  // load all components before Eval
       try {
-
 
         // Don't evaluate a simple "#f" which is used by the poller
         if (input_code.equals("#f")) {
           Log.e(LOG_TAG, "Skipping evaluation of #f");
         } else {
-          scheme.eval(formCode);
-        }
-
-        for (String code : taskCodes.values()) {
-          Log.d(LOG_TAG, "we ARE indeed TASKING!!!");
-          scheme.eval(code);
+          scheme.eval(contextCode);
         }
 
         res = new Response(HTTP_OK, MIME_JSON, RetValManager.fetch(false));
       } catch (Throwable ex) {
         Log.e(LOG_TAG, "newblocks: Scheme Failure", ex);
-        RetValManager.appendReturnValue(formBlockId, "BAD", ex.toString());
+        RetValManager.appendReturnValue(contextBlockId, "BAD", ex.toString());
         res = new Response(HTTP_OK, MIME_JSON, RetValManager.fetch(false));
       }
       res.addHeader("Access-Control-Allow-Origin", "*");

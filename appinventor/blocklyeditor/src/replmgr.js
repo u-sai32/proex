@@ -338,6 +338,9 @@ Blockly.ReplMgr.resetYail = function(partial, all) {
         }
         return;
     }
+    if (!phoneState.phoneQueue) {
+        phoneState.phoneQueue = {};
+    }
     if (phoneState.form) {
         if (all || phoneState.form == this.phoneContextState) {
             phoneState.form.initialized = false; // so running io stops
@@ -348,6 +351,9 @@ Blockly.ReplMgr.resetYail = function(partial, all) {
         }
     } else {
         phoneState.form = {};
+    }
+    if (!phoneState.tasks) {
+        phoneState.tasks = {};
     }
     for (var context in phoneState.tasks) {
         if (phoneState.tasks[context]) {
@@ -457,82 +463,49 @@ Blockly.ReplMgr.putYail = (function() {
             if (!phonereceiving) {
                 engine.receivefromphone();
             }
-            var formInput = {};
-            var taskInputs = [];
+            var contextInput = {};
             if (top.loadAll) {
                 var chunk;
-                var formName = "";
-                var formCode = "";
-                var formLastBlock;
-                var taskCodes = {};
-                var taskLastBlocks = {};
+                var contextType = "";
+                var contextName = "";
+                var contextCode = "";
+                var contextLastBlock;
                 var first = true;
-                var chunkedForm;
-                var chunkedTasks = {};
+                var chunked;
                 while ((chunk = rs.phoneState.phoneQueue[Blockly.ReplMgr.contextName].shift())) {
                     if (first) {
                         first = false;
                     }
-                    if (chunk.type == "Form") {
-                        if (chunkedForm === undefined) {
-                            chunkedForm = false;
-                        } else if (chunkedForm === false) {
-                            console.log("We did chunk for Screen: " + chunk.name);
-                            chunkedForm = true;
-                        }
-                        formName = chunk.name;
-                        formCode += chunk.code; // We can concatonate because AppInvHTTPD runs us
-                                                // in a (begin) block
-                        formLastBlock = chunk.block;
-                    } else if (chunk.type == "Task") {
-                        if (chunkedTasks[chunk.name] === undefined) {
-                            chunkedTasks[chunk.name] = false;
-                        } else if (chunkedTasks[chunk.name] === false) {
-                            console.log("We did chunk for Task: " + chunk.name);
-                            chunkedTasks[chunk.name] = true;
-                        }
-                        if (!taskCodes[chunk.name])
-                            taskCodes[chunk.name] = "";
-                        taskCodes[chunk.name] += chunk.code;
-                        taskLastBlocks[chunk.name] = chunk.block;
+                    if (chunked === undefined) {
+                        chunked = false;
+                    } else if (chunked === false) {
+                        console.log("We did chunk for " + chunk.name);
+                        chunked = true;
                     }
+                    contextType = chunk.type;
+                    contextName = chunk.name;
+                    contextCode += chunk.code; // We can concatonate because AppInvHTTPD runs us
+                                               // in a (begin) block
+                    contextLastBlock = chunk.block;
                 }
                 if (first) {               // There was no work to do
                     context.phoneContextState.ioRunning = false;
                     console.log("chk chk pollphone stopped");
                     return;
                 }
-                formInput = {
-                    'name' : formName,
-                    'code' : formCode,
+                contextInput = {
+                    'name' : contextName,
+                    'type' : contextType,
+                    'code' : contextCode,
                     'block' : null,   // We cannot link this large code block
                                       // to any particular block (yet)
                     'chunking' : true // indicate we are chunking...
                 };
-                if (chunkedForm === true) {
-                    console.log("Screen Chunk: " + formInput.name + " => "+ formInput.code);
-                } else if (chunkedForm === false) {
-                    console.log("Screen Slow Path: " + formInput.name + " => "+ formInput.code);
-                    formInput.block = formLastBlock; // Only one block, so we can provide it
-                }
-                for (var contextName in chunkedTasks) {
-                    if (!chunkedTasks.hasOwnProperty(contextName))
-                        continue;
-                    if (chunkedTasks[contextName] !== undefined) {
-                        var taskInput = {
-                            name: contextName,
-                            code: taskCodes[contextName],
-                            block: null,
-                            chunking: true
-                        }
-                        if (chunkedTasks[contextName] === true) {
-                            console.log("Task Chunk: " + taskInput.name + " => " + taskInput.code);
-                        } else if (chunkedTasks[contextName] === false) {
-                            console.log("Task Slow Path: " + taskInput.name + " => " + taskInput.code);
-                            taskInput.block = taskLastBlocks[contextName];
-                        }
-                        taskInputs.push(taskInput);
-                    }
+                if (chunked === true) {
+                    console.log("Context Chunk: " + contextInput.name + " => "+ contextInput.code);
+                } else if (chunked === false) {
+                    console.log("Context Slow Path: " + contextInput.name + " => "+ contextInput.code);
+                    contextInput.block = contextLastBlock; // Only one block, so we can provide it
                 }
             } else {
                 var chunk = rs.phoneState.phoneQueue[Blockly.ReplMgr.contextName].shift();
@@ -541,47 +514,23 @@ Blockly.ReplMgr.putYail = (function() {
                     context.phoneContextState.ioRunning = false;
                     return;
                 }
-                if (chunk.type == "Form") {
-                    formInput = chunk;
-                }
-                else if (chunk.type == "Task") {
-                    taskInputs.push(chunk);
-                }
+                contextInput = chunk;
 
             }
-            var repl_input = {
-                form: {},
-                tasks: []
-            };
-            if (formInput && formInput.block) {
-                formInput.blockid = formInput.block.id;
+            if (contextInput && contextInput.block) {
+                contextInput.blockid = contextInput.block.id;
             } else {
-                if (formInput && formInput.chunking) { // Used to indicate an error in when chunking
-                    formInput.blockid = "-2";
+                if (contextInput && contextInput.chunking) { // Used to indicate an error in when chunking
+                    contextInput.blockid = "-2";
                 } else {
-                    formInput.blockid = "-1";
+                    contextInput.blockid = "-1";
                 }
             }
-            repl_input.form = {
-                name: formInput.name,
-                code: formInput.code,
-                blockid: formInput.blockid
-            }
-            for (var taskInput of taskInputs) {
-                if (taskInput && taskInput.block) {
-                    taskInput.blockid = taskInput.block.id;
-                } else {
-                    if (taskInput && taskInput.chunking) {
-                        taskInput.blockid = "-2";
-                    } else {
-                        taskInput.blockid = "-1";
-                    }
-                }
-                repl_input.tasks.push({
-                    name: taskInput.name,
-                    code: taskInput.code,
-                    blockid: taskInput.blockid
-                });
+            var repl_input = {
+                name: contextInput.name,
+                type: contextInput.type,
+                code: contextInput.code,
+                blockid: contextInput.blockid
             }
             var encoder = new goog.Uri.QueryData();
             conn = goog.net.XmlHttp();
@@ -590,11 +539,11 @@ Blockly.ReplMgr.putYail = (function() {
                 if (this.readyState == 4 && this.status == 200) {
                     var json = goog.json.parse(this.response);
                     if (json.status != 'OK') {
-                        if (formInput.failure)
-                            formInput.failure(Blockly.Msg.REPL_ERROR_FROM_COMPANION);
+                        if (contextInput.failure)
+                            contextInput.failure(Blockly.Msg.REPL_ERROR_FROM_COMPANION);
                     } else {
-                        if (formInput.success)
-                            formInput.success();
+                        if (contextInput.success)
+                            contextInput.success();
                     }
                     context.processRetvals(json.values);
                     rs.seq_count += 1;
@@ -604,8 +553,8 @@ Blockly.ReplMgr.putYail = (function() {
                 } else {
                     if (this.readyState == 4) {
                         console.log("putYail(poller): status = " + this.status);
-                        if (formInput.failure) {
-                            formInput.failure(Blockly.Msg.REPL_NETWORK_CONNECTION_ERROR);
+                        if (contextInput.failure) {
+                            contextInput.failure(Blockly.Msg.REPL_NETWORK_CONNECTION_ERROR);
                         }
                         var dialog = new Blockly.Util.Dialog(Blockly.Msg.REPL_NETWORK_ERROR, Blockly.Msg.REPL_NETWORK_ERROR_RESTART, Blockly.Msg.REPL_OK, null, 0,
                             function() {
