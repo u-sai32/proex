@@ -6,6 +6,7 @@
 
 package com.google.appinventor.components.runtime;
 
+import android.util.Log;
 import com.google.appinventor.components.annotations.DesignerComponent;
 import com.google.appinventor.components.annotations.DesignerProperty;
 import com.google.appinventor.components.annotations.PropertyCategory;
@@ -181,6 +182,7 @@ public final class Player extends AndroidNonvisibleComponent
       player.setOnCompletionListener(this);
 
       try {
+        Log.d("AI2", "context is " + context.toString());
         MediaUtil.loadMediaPlayer(player, context, sourcePath);
 
       } catch (IOException e) {

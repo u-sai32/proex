@@ -217,7 +217,9 @@ public class EventDispatcher {
     // only dispatch the event if the registered component matches the component that generated the
     // event.  This should only be true for one (or zero) of the closures.
     boolean dispatched = false;
+    Log.d("EventDispatcher", "delegateDispatchEvent called");
     for (EventClosure eventClosure : eventClosures) {
+      Log.d("EventDispatcher", "event Closure hit");
       if (dispatchDelegate.dispatchEvent(component,
                                          eventClosure.componentName,
                                          eventClosure.eventName,

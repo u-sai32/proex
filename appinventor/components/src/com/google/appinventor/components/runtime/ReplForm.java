@@ -80,6 +80,7 @@ public class ReplForm extends Form {
         httpdServer.stop();
         httpdServer = null;
     }
+    this.stopReplService();
     finish();                   // Must really exit here, so if you hits the back button we terminate completely.
     System.exit(0);
   }
@@ -279,7 +280,7 @@ public class ReplForm extends Form {
   }
 
   @Override
-  public void startNewService(String taskName, Object startValue) {
+  protected void startNewService(String taskName, Object startValue) {
     Intent serviceIntent = new Intent();
     // Note that the following is dependent on task generated class names being the same as
     // their task names and all tasks being in the same package.
@@ -303,8 +304,22 @@ public class ReplForm extends Form {
     }
   }
 
+  @Override
+  public void StopTask(String taskName) {
+  }
+
   private void startReplService() {
     this.startNewService(null, null);
+  }
+
+  private void stopReplService() {
+    Intent serviceIntent = new Intent();
+    // Note that the following is dependent on task generated class names being the same as
+    // their task names and all tasks being in the same package.
+    String packageName = getPackageName();
+    serviceIntent.setClassName(this, packageName + "." + "Task1");
+    Log.d(LOG_TAG, "stopping ReplService : serviceClass=" + packageName + "." + "Task1");
+    this.stopService(serviceIntent);
   }
 
   /**

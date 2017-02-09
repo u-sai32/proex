@@ -122,11 +122,8 @@ public class MediaUtil {
         return MediaSource.REPL_ASSET;
       else
         return MediaSource.ASSET;
-    } else if (context instanceof ReplTask) {
-      if (((ReplTask)context).isAssetsLoaded())
+    } else if (context instanceof Context) {
         return MediaSource.REPL_ASSET;
-      else
-        return MediaSource.ASSET;
     }
 
     return MediaSource.ASSET;
@@ -529,6 +526,7 @@ public class MediaUtil {
   public static void loadMediaPlayer(MediaPlayer mediaPlayer, Context context, String mediaPath)
       throws IOException {
     MediaSource mediaSource = determineMediaSource(context, mediaPath);
+    Log.d(LOG_TAG, "media Source" + mediaSource.toString());
     switch (mediaSource) {
       case ASSET:
         AssetFileDescriptor afd = getAssetsIgnoreCaseAfd(context,mediaPath);
@@ -544,6 +542,7 @@ public class MediaUtil {
 
 
       case REPL_ASSET:
+        Log.d(LOG_TAG, "Media Source ReplAsset");
         mediaPlayer.setDataSource(replAssetPath(mediaPath));
         return;
 

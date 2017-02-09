@@ -33,7 +33,7 @@ public class ReplTask extends Task {
   protected static Task replTask = null;
   private static final String LOG_TAG = "ReplTask";
   private boolean assetsLoaded = true;
-  private HashMap<String, TaskThread> TaskThreads = new HashMap<String, TaskThread>();
+  private HashMap<String, TaskThread> taskThreads = new HashMap<String, TaskThread>();
 
   final protected class ReplTaskHandler extends Task.TaskHandler {
 
@@ -74,25 +74,30 @@ public class ReplTask extends Task {
   public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d("ReplTask", "ReplTask onStartCommand Called");
     replTask = this;
-    Log.d("ReplTask", "set replTask=");
-    String startValue = intent.getStringExtra(Form.SERVICE_ARG);
     String taskName = intent.getStringExtra(Form.SERVICE_NAME);
+    String startValue = intent.getStringExtra(Form.SERVICE_ARG);
+    final Object decodedStartVal = Form.decodeJSONStringForForm(startValue, "get start value");
     if (taskName == null) { // This is ReplTask itself Starting
       return START_STICKY;
     }
-    Object decodedStartVal = Form.decodeJSONStringForForm(startValue, "get start value");
-    TaskStarted(decodedStartVal);
-    Log.d("Task", "Done Dispatch but not Returned");
+    Runnable runnable = new Runnable() {
+      @Override
+      public void run() {
+        TaskStarted(decodedStartVal);
+      }
+    };
+    runTaskCode(taskName, runnable);
+    Log.d("Task", "Done Dispatch about to Return");
     return START_STICKY;
   }
 
 
   public void runTaskCode(String taskName, Runnable runnable) {
     Log.d("ReplTask", "Got executed. Thank God");
-    TaskThread taskThread = this.TaskThreads.get(taskName);
+    TaskThread taskThread = this.taskThreads.get(taskName);
     if (taskThread == null) {
       taskThread = new TaskThread(taskName, this);
-      this.TaskThreads.put(taskName, taskThread);
+      this.taskThreads.put(taskName, taskThread);
     }
     TaskHandler taskHandler = taskThread.getTaskHandler();
     taskHandler.post(runnable);
@@ -114,7 +119,14 @@ public class ReplTask extends Task {
 
   @Override
   public String getDispatchContext() {
+    Log.d(LOG_TAG, "getDispatchContext called" + Thread.currentThread().getName());
     return Thread.currentThread().getName();
+  }
+
+  @Override
+  public boolean canDispatchEvent(Component component, String eventName) {
+      Log.e(LOG_TAG, "canDispatch true"  );
+      return true;
   }
 
 

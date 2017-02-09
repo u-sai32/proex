@@ -2972,6 +2972,7 @@ list, use the make-yail-list constructor with no arguments.
                              (exception:getMessage)))))))))
 (define (in-bg blockid promise)
   (set! *this-is-the-repl* #t)          ;; Should do this somewhere else...
+  (set-repl-task)
   (android-log (format #f "in BG called: ~A" (java.lang.Thread:currentThread)))
   (*repl-task*:runTaskCode
    "Task1"

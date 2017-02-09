@@ -183,18 +183,18 @@ public class Task extends Service
   }
 
   @Override
-  public int onStartCommand(final Intent intent, int flags, int startId) {
+  public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d("Task", "Task onStartCommand Called");
+    String startValue = intent.getStringExtra(Form.SERVICE_ARG);
+    final Object decodedStartVal = Form.decodeJSONStringForForm(startValue, "get start value");
     Runnable command = new Runnable() {
       @Override
       public void run() {
-        String startValue = intent.getStringExtra(Form.SERVICE_ARG);
-        Object decodedStartVal = Form.decodeJSONStringForForm(startValue, "get start value");
         TaskStarted(decodedStartVal);
       }
     };
     taskThread.getTaskHandler().post(command);
-    Log.d("Task", "Done Dispatch but not Returned");
+    Log.d("Task", "Done Dispatch about to Return");
     return START_STICKY;
   }
 
