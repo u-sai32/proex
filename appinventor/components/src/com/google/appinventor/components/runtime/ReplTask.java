@@ -5,35 +5,21 @@
 
 package com.google.appinventor.components.runtime;
 
-import java.net.InetAddress;
-import java.net.NetworkInterface;
-import java.util.Enumeration;
 import java.util.HashMap;
-import java.util.Iterator;
-import java.io.File;
-import java.io.IOException;
 
 import android.os.Looper;
 import android.os.Message;
-import com.google.appinventor.components.runtime.util.AppInvHTTPD;
-import com.google.appinventor.components.runtime.util.RetValManager;
-import com.google.appinventor.components.runtime.util.SdkLevel;
-import com.google.appinventor.components.runtime.util.EclairUtil;
 
-import android.content.ComponentName;
 import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.os.Bundle;
 import android.util.Log;
-import android.content.Context;
 
 
 public class ReplTask extends Task {
 
-  protected static Task replTask = null;
+  public static ReplTask replTask;
   private static final String LOG_TAG = "ReplTask";
+  private static final HashMap<String, TaskThread> taskThreads = new HashMap<String, TaskThread>();
   private boolean assetsLoaded = true;
-  private HashMap<String, TaskThread> taskThreads = new HashMap<String, TaskThread>();
 
   final protected class ReplTaskHandler extends Task.TaskHandler {
 
@@ -44,36 +30,23 @@ public class ReplTask extends Task {
     @Override
     public void handleMessage(Message msg) {
 
-
     }
   }
 
 
   public ReplTask() {
     super();
-    Log.i("ReplTask", "Started");
+    replTask = this;
   }
 
   @Override
   public void onCreate() {
     super.onCreate();
-    Log.d("ReplTask", "Task onCreate");
-    replTask = this;
-    getReplTask();
-  }
-
-  @Override
-  public void onDestroy() {
-    super.onDestroy();
-
-    stopSelf();                  // Must really exit here, so if you hits the back button we terminate completely.
-    System.exit(0);
   }
 
   @Override
   public int onStartCommand(Intent intent, int flags, int startId) {
     Log.d("ReplTask", "ReplTask onStartCommand Called");
-    replTask = this;
     String taskName = intent.getStringExtra(Form.SERVICE_NAME);
     String startValue = intent.getStringExtra(Form.SERVICE_ARG);
     final Object decodedStartVal = Form.decodeJSONStringForForm(startValue, "get start value");
@@ -92,30 +65,31 @@ public class ReplTask extends Task {
   }
 
 
-  public void runTaskCode(String taskName, Runnable runnable) {
+  public static void runTaskCode(String taskName, Runnable runnable) {
     Log.d("ReplTask", "Got executed. Thank God");
-    TaskThread taskThread = this.taskThreads.get(taskName);
+    TaskThread taskThread = taskThreads.get(taskName);
     if (taskThread == null) {
-      taskThread = new TaskThread(taskName, this);
-      this.taskThreads.put(taskName, taskThread);
+      taskThread = new TaskThread(taskName, ReplTask.replTask);
+      taskThreads.put(taskName, taskThread);
     }
     TaskHandler taskHandler = taskThread.getTaskHandler();
     taskHandler.post(runnable);
   }
 
 
+  @Override
+  public void onDestroy() {
+    super.onDestroy();
+
+    stopSelf();
+  }
+
+
+
   public boolean isAssetsLoaded() {
     return assetsLoaded;
   }
 
-
-  public static Task getReplTask() {
-    if (replTask == null) {
-      Log.d(LOG_TAG, "replTask is null yet");
-    }
-    else Log.d(LOG_TAG, "replTask is VALID yet");
-    return replTask;
-  }
 
   @Override
   public String getDispatchContext() {
@@ -125,9 +99,16 @@ public class ReplTask extends Task {
 
   @Override
   public boolean canDispatchEvent(Component component, String eventName) {
-      Log.e(LOG_TAG, "canDispatch true"  );
-      return true;
+    Log.i(LOG_TAG, "canDispatch true"  );
+    return true;
   }
 
-
+  /**
+   * Returns the Task of the Thread this function is called on.
+   * @return
+   */
+  @Override
+  public String getTaskName() {
+    return Thread.currentThread().getName();
+  }
 }

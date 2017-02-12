@@ -33,9 +33,6 @@ Blockly.Yail.ORDER_ATOMIC = 0;         // 0 "" ...
 Blockly.Yail.ORDER_NONE = 99;          // (...)
 
 Blockly.Yail.YAIL_ADD_COMPONENT = "(add-component ";
-Blockly.Yail.YAIL_ADD_TO_CONTEXT_ENVIRONMENTS = "(add-to-context-environments ";
-Blockly.Yail.YAIL_ADD_TO_CONTEXT_GLOBAL_VAR_ENVIRONMENTS = "(add-to-context-global-var-context-environments ";
-Blockly.Yail.YAIL_ADD_TO_CONTEXT_INIT_THUNK_ENVIRONMENTS = "(add-to-context-init-thunk-environments ";
 Blockly.Yail.YAIL_ADD_TO_LIST = "(add-to-list ";
 Blockly.Yail.YAIL_BEGIN = "(begin ";
 Blockly.Yail.YAIL_CALL_COMPONENT_METHOD = "(call-component-method ";

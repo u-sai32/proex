@@ -2,8 +2,8 @@
 $Source $Yail
 |#
 
-(define-repl-form edu.mit.appinventor.aicompanion3.Screen1 Screen1)
 (require <com.google.youngandroid.runtime>)
+(define-repl-form edu.mit.appinventor.aicompanion3.Screen1 Screen1)
 
 (def Screen1 (p$badversion )  (set-and-coerce-property! 'ErrorLabel 'Text "The version of App Inventor you are using is not compatible with this Companion app. " 'text))
 (def Screen1 (p$callrendezvous $code)  (set-and-coerce-property! 'Web1 'Url (call-yail-primitive string-append (*list-for-runtime* "http://" (get-var Screen1 g$rendezvousServer) "/rendezvous/" ) '(text text text ) "join") 'text)(call-component-method 'Screen1 'Web1 'PostText (*list-for-runtime* (call-component-method 'Screen1 'Web1 'BuildRequestData (*list-for-runtime* (call-yail-primitive make-yail-list (*list-for-runtime* (call-yail-primitive make-yail-list (*list-for-runtime* "key" (lexical-value $code) ) '(any any ) "make a list") (call-yail-primitive make-yail-list (*list-for-runtime* "ipaddr" (call-component-method 'Screen1 'PhoneStatus1 'GetWifiIpAddress (*list-for-runtime*) '()) ) '(any any ) "make a list") (call-yail-primitive make-yail-list (*list-for-runtime* "port" "9987" ) '(any any ) "make a list") ) '(any any any ) "make a list")) '(list))) '(text)))

@@ -45,15 +45,15 @@ import java.util.Set;
 @UsesPermissions(permissionNames = "android.permission.INTERNET,android.permission.ACCESS_WIFI_STATE,android.permission.ACCESS_NETWORK_STATE")
 public class Task extends Service
     implements Component, ComponentContainer, HandlesEventDispatching {
+
   private static final String LOG_TAG = "Task";
 
   protected static Map<String, Task> taskMap = new HashMap<String, Task>();
 
-
   protected String taskName;
   protected int taskType;
 
-  public class TaskHandler extends Handler {
+  public static class TaskHandler extends Handler {
 
     protected TaskHandler(Looper looper) {
       super(looper);
@@ -66,12 +66,10 @@ public class Task extends Service
 
   }
 
-  public class TaskThread extends HandlerThread {
+  public static class TaskThread extends HandlerThread {
 
     protected TaskHandler taskHandler;
-
     protected final Task task;
-
 
     public TaskThread(Task task) {
       super(task.getTaskName());
@@ -147,13 +145,6 @@ public class Task extends Service
     Runnable initialize = new Runnable() {
       @Override
       public void run() {
-
-        if (Thread.currentThread() == Looper.getMainLooper().getThread()) {
-          Log.d(LOG_TAG, "Task " + taskName + " same Thread as Main UI" + Thread.currentThread() );
-        }
-        else {
-          Log.d(LOG_TAG, "Task " + taskName + "thread not main UI thread" + Thread.currentThread() );
-        }
 
         $define();
 
@@ -381,9 +372,6 @@ public class Task extends Service
   }
 
 
-  public static Task getTask(String taskName) {
-    return taskMap.get(taskName);
-  }
 
   /**
    * Specifies the Task Behaviour.
@@ -466,8 +454,54 @@ public class Task extends Service
     }
   }
 
+
   public String getTaskName() {
     return taskName;
   }
+
+  // This is called by runtime.scm
+  /**
+   * Returns the Task instance corresponding to Task Name
+   * @param taskName
+   */
+  public static Task getTask(String taskName) {
+    return taskMap.get(taskName);
+  }
+
+  // This is called by runtime.scm
+  /**
+   * Returns the Task instance of the Thread this method is called on.
+   * @return
+   */
+  public static Task getCurrentTask() {
+    Thread thread = Thread.currentThread();
+    if (!(thread instanceof TaskThread)) {
+      // We are not called on a TaskThread
+      return null;
+    }
+    String taskName = thread.getName();
+    Task currentTask = taskMap.get(taskName);
+    if (currentTask == null) {
+      throw new IllegalThreadStateException("There is No Task for the TaskThread : " + taskName);
+    }
+    return currentTask;
+  }
+
+  // This is called by runtime.scm
+  /**
+   * Returns the Task name of the Thread this method is called on.
+   * @return
+   */
+  public static String getCurrentTaskName() {
+    Thread thread = Thread.currentThread();
+    if (!(thread instanceof TaskThread)) {
+      // We are not called on a TaskThread
+      return null;
+    }
+    String taskName = thread.getName();
+    Task currentTask = taskMap.get(taskName);
+    return currentTask.getTaskName();
+  }
+
 
 }
