@@ -28,7 +28,6 @@
 
 ;; environment helper functions
 ;; generic functions that do a boolean and null check on any environment passed
-;; TODO : they should probably do an instance? check
 (define (add-to-environment env :: gnu.mapping.Environment symbol :: gnu.mapping.Symbol object)
   (android-log (format #f "Add to Environment called : env ~A | symbol : ~A | value : ~A" env symbol object))
     (if (not (eq? env #!null))
@@ -64,12 +63,12 @@
 
 
 ;;; These are environments which map to environments
-;;; AI2 context (form or task) needs three distinct environment to survive
+;;; We need this because we will need multiple environments concurrently
+;;; YoungAndroid context (form or task) needs three distinct environment to survive
 ;;; 1. context-environment : contains component instances, event definitions
 ;;; 2. context-global-var-environment : contains global variables and procedures
 ;;; 3. context-init-thunk-environment : contains component initialization thunk
 
-;;; I know that the entire point of scheme is to avoid typing code like this
 ;;; TODO : think of a more 'macroish' way to write this
 
 ;;; context-environments
@@ -291,10 +290,8 @@
          (android-log (format #f "Copying component properties for ~A" component-name))
          (SimplePropertyUtil:copyComponentProperties existing-component component-to-add))))))
 
-(define-alias AndroidLooper <android.os.Looper>)
 (define-alias SimpleForm <com.google.appinventor.components.runtime.Form>)
 (define-alias SimpleTask <com.google.appinventor.components.runtime.Task>)
-(define-alias SimpleTaskThread <com.google.appinventor.components.runtime.Task$TaskThread>)
 (define-alias SimpleReplTask <com.google.appinventor.components.runtime.ReplTask>)
 
 (define (call-Initialize-of-components context . component-names)
@@ -305,7 +302,7 @@
             component-names)
   ;; Do the explicit component initialization methods and events
   (for-each (lambda (component-name)
-              (*:callInitialize (as SimpleForm *this-form*) ;; correct here
+              (*:callInitialize (as SimpleForm *this-form*) 
                                 (lookup-in-context-environment context component-name)))
             component-names))
 
@@ -413,7 +410,7 @@
 ;;; Global variables
 
 ;;; (get-var var1)
-;;; ==> (lookup-global-var-in-current-form-environment 'var1)
+;;; ==> (lookup-in-context-global-var-environment 'var1)
 (define-syntax get-var
   (syntax-rules ()
     ((_ context var-name)
@@ -421,7 +418,7 @@
      (lookup-in-context-global-var-environment 'context 'var-name *the-null-value*))))
 
 ;;; (set-var! var1 10)
-;;; ==> (add-global-var-to-current-form-environment 'var1 10)
+;;; ==> (add-to-context-global-var-environment 'context 'var1 10)
 ;;; note that set-var! will create the binding if it doesn't exist
 (define-syntax set-var!
     (syntax-rules ()
@@ -976,10 +973,6 @@
          ;; is not set.
          (gnu.expr.Language:setDefaults (kawa.standard.Scheme:getInstance))
 
-         ;; Note (halabelson); I wanted to simply do this, rather than install the do-after-creation mechanism.
-         ;; But it doesn't work to do this here, because the form environment is null at this point.
-         ;;(add-to-task-environment 'task-name (this))
-
          ;; Another hack. The run() method is defined internally by Kawa to eval the
          ;; top-level forms but it's not getting properly executed, so we force it here.
          (try-catch
@@ -1155,6 +1148,7 @@
              (begin expr ...)
              (add-to-task-do-after-creation (delay (begin expr ...))))))))
 
+;;; Register our form after the form is created
 (define (register-form context :: gnu.mapping.Symbol)
     (set-this-form)
     (add-to-context-environments context (*:.form-environment *this-form*))
@@ -1163,57 +1157,20 @@
     (if *this-is-the-repl*
         (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks")))))
 
-(define (register-task context :: gnu.mapping.Symbol)
-    (set-this-task (symbol->string context))
-    (if *this-is-the-repl*
-        (begin (set-repl-task) ;;redo
-               (add-to-context-environments context (gnu.mapping.Environment:make (symbol->string context)))
-               (add-to-context-environment context context *this-task* )
-               (add-to-context-global-var-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-global-vars"))))
-               (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks"))))
-
-        (begin (add-to-context-environments context (*:.task-environment *this-task* ) )
-               (add-to-context-environment context context *this-task*)
-               (add-to-context-global-var-environments context (*:.global-var-environment *this-task*))))
 
 ;; The following environments are really just for testing.
 (define *test-environment* (gnu.mapping.Environment:make 'test-env))
 (define *test-global-var-environment* (gnu.mapping.Environment:make 'test-global-var-env))
 
-(define (add-to-current-form-environment name :: gnu.mapping.Symbol object)
-                    ;  (android-log (format #f "Adding ~A to env ~A with value ~A" name
-                    ;                                     (if (not (eq? *this-form* #!null)) (*:.form-environment *this-form*) 'null)
-                    ;                                     object))
-  (if (not (eq? *this-form* #!null))
-      (gnu.mapping.Environment:put (*:.form-environment *this-form*) name object)
-      ;; The following is really for testing.  In normal situations *this-form* should be non-null
-      (gnu.mapping.Environment:put *test-environment* name object)))
 
-(define (lookup-in-current-form-environment name :: gnu.mapping.Symbol #!optional (default-value #f))
-                    ;  (android-log (format #f "Looking up ~A in env ~A" name
-                    ;                                     (if (not (eq? *this-form* #!null)) (*:.form-environment *this-form*) 'null)))
-  (let ((env (if (not (eq? *this-form* #!null))
-                 (*:.form-environment *this-form*)
-                 ;; The following is just for testing. In normal situations *this-form* should be non-null
-                 *test-environment*)))
-    (if (gnu.mapping.Environment:isBound env name)
-        (gnu.mapping.Environment:get env name)
-        default-value)))
+(define (add-to-current-context-environment name :: gnu.mapping.Symbol object)
+  (add-to-context-environment (get-current-context-symbol) name object))
 
-(define (delete-from-current-form-environment name :: gnu.mapping.Symbol)
-  (if (not (eq? *this-form* #!null))
-      (gnu.mapping.Environment:remove (*:.form-environment *this-form*) name)
-      ;; The following is really for testing.  In normal situations *this-form* should be non-null
-      (gnu.mapping.Environment:remove *test-environment* name)))
+(define (lookup-in-current-context-environment name :: gnu.mapping.Symbol #!optional (default-value #f))
+  (lookup-in-context-environment (get-current-context-symbol) name default-value))
 
-(define (rename-in-current-form-environment old-name :: gnu.mapping.Symbol new-name :: gnu.mapping.Symbol)
-  (when (not (eqv? old-name new-name))
-    (let ((old-value (lookup-in-current-form-environment old-name)))
-      (if (not (eq? *this-form* #!null))
-          (gnu.mapping.Environment:put (*:.form-environment *this-form*) new-name old-value)
-          ;; The following is really for testing.  In normal situations *this-form* should be non-null
-          (gnu.mapping.Environment:put *test-environment*  new-name old-value))
-      (delete-from-current-form-environment old-name))))
+(define (delete-from-current-context-environment name :: gnu.mapping.Symbol)
+  (delete-from-context-environment (get-current-context-symbol) name))
 
 (define (rename-in-context-environment context :: gnu.mapping.Symbol old-name :: gnu.mapping.Symbol new-name :: gnu.mapping.Symbol)
     (when (not (eqv? old-name new-name))
@@ -1221,39 +1178,14 @@
             (add-to-context-environment context new-name old-value)
             (remove-from-context-environment context old-name))))
 
-(define (add-global-var-to-current-form-environment name :: gnu.mapping.Symbol object)
-  (begin
-    (if (not (eq? *this-form* #!null))
-        (gnu.mapping.Environment:put (*:.global-var-environment *this-form*) name object)
-        ;; The following is really for testing.  In normal situations *this-form* should be non-null
-        (gnu.mapping.Environment:put *test-global-var-environment* name object))
-    ;; return *the-null-value* rather than #!void, which would show as a blank in the repl balloon
-    *the-null-value*))
-
-(define (lookup-global-var-in-current-form-environment name :: gnu.mapping.Symbol #!optional (default-value #f))
-  (let ((env (if (not (eq? *this-form* #!null))
-                 (*:.global-var-environment *this-form*)
-                 ;; The following is just for testing. In normal situations *this-form* should be non-null
-                 *test-global-var-environment*)))
-    (if (gnu.mapping.Environment:isBound env name)
-        (gnu.mapping.Environment:get env name)
-        default-value)))
-
-(define (reset-current-form-environment)
+(define (reset-current-form-environment) 
   (if (not (eq? *this-form* #!null))
       (let ((form-name (*:.form-name-symbol *this-form*)))
-        ;; Clear and Remove old environments
-        (clear-context-environment form-name)
-        (remove-from-context-environments form-name)
-        (clear-context-global-var-environment form-name)
-        (remove-from-context-global-var-environments form-name)
-        (clear-context-init-thunk-environment form-name)
-        (remove-from-context-init-thunk-environments form-name)
         ;; Create a new environment
         (set! (*:.form-environment *this-form*)
               (gnu.mapping.Environment:make (symbol->string form-name)))
         ;; Add a binding from the form name to the form object
-        (add-to-current-form-environment form-name *this-form*)
+        (add-to-environment (*:.form-environment *this-form*) form-name *this-form*)
         ;; Create a new global variable environment
         (set! (*:.global-var-environment *this-form*)
               (gnu.mapping.Environment:make (string-append
@@ -1265,8 +1197,10 @@
         (*:addParent (KawaEnvironment:getCurrent) *test-environment*)
         (set! *test-global-var-environment* (gnu.mapping.Environment:make 'test-global-var-env)))))
 
-(define (reset-task-environment)
-  (android-log (format #f "reset task called: ~A" task)))
+(define (reset-task-environment task :: gnu.mapping.Symbol object)
+  (if (not (eq? (get-context-instance task) #!null))
+      (begin
+        (android-log (format #f "reset task called: ~A" task)))))
 
 
 (define-syntax foreach
@@ -2976,9 +2910,8 @@ list, use the make-yail-list constructor with no arguments.
                              (exception:getMessage)))))))))
 (define (in-bg blockid promise)
   (set! *this-is-the-repl* #t)          ;; Should do this somewhere else...
-  (set-repl-task)
   (android-log (format #f "in BG called: ~A" (java.lang.Thread:currentThread)))
-  (*repl-task*:runTaskCode
+  (SimpleReplTask:runTaskCode
    "Task1"
    (runnable (lambda ()
                (android-log (format #f "in BG doing: ~A" (java.lang.Thread:currentThread)))
@@ -3027,9 +2960,6 @@ list, use the make-yail-list constructor with no arguments.
 
 (define *ui-handler* #!null)
 (define *this-form* #!null)
-(define *this-task* #!null)
-(define *repl-task* #!null)
-
 
 ;;; This is called as part of the code that sets up the form in the phone application.
 ;;; It is not explicitly called when the Repl is started. But set-up-repl-environment
@@ -3037,7 +2967,6 @@ list, use the make-yail-list constructor with no arguments.
 
 (define (init-runtime)
   (set-this-form)
-  (set-repl-task)
   (set! *ui-handler* (android.os.Handler)))
 
 
@@ -3049,20 +2978,13 @@ list, use the make-yail-list constructor with no arguments.
 (define (set-this-form)
   (set! *this-form* (SimpleForm:getActiveForm)))
 
-(define (set-this-task task-name)
-    (set! *this-task* (SimpleTask:getTask task-name)))
-
-(define (set-repl-task)
-  (set! *repl-task* (SimpleReplTask:getReplTask)))
-
-
 (define (is-current-context-form) :: boolean
   (if (eq? (android.os.Looper:myLooper) (android.os.Looper:getMainLooper))
     #t
     #f))
 
 (define (is-current-context-task) :: boolean
-  (if (instance? (java.lang.Thread:currentThread) SimpleTaskThread)
+  (if (instance? (java.lang.Thread:currentThread) <com.google.appinventor.components.runtime.Task$TaskThread>)
       #t
       #f))
 
@@ -3072,10 +2994,9 @@ list, use the make-yail-list constructor with no arguments.
             (let ((current-context (SimpleForm:getActiveForm)))
                 (current-context:getFormName)))
         ((is-current-context-task)
-            (java.lang.Thread:getName (java.lang.Thread:currentThread)))))
+            (SimpleTask:getCurrentTaskName))))
 
 (define (get-current-context-symbol) :: <gnu.mapping.Symbol>
-    (android-log (format "current context name is ~A" (get-current-context-name)) )
     (string->symbol (get-current-context-name)))
 
 (define (get-current-context-instance)
