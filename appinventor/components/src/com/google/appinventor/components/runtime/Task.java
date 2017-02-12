@@ -71,18 +71,6 @@ public class Task extends Service
     protected TaskHandler taskHandler;
     protected final Task task;
 
-    public TaskThread(Task task) {
-      super(task.getTaskName());
-      this.task = task;
-      this.start();
-    }
-
-    public TaskThread(Task task, int priority) {
-      super(task.getTaskName(), priority);
-      this.task = task;
-      this.start();
-    }
-
     public TaskThread(String taskName, Task task) {
       super(taskName);
       this.task = task;
@@ -138,7 +126,7 @@ public class Task extends Service
     taskName = className.substring(lastDot + 1);
     Log.d(LOG_TAG, "Task " + taskName + " got onCreate");
 
-    taskThread = new TaskThread(this);
+    taskThread = new TaskThread(taskName,this);
 
     taskMap.put(taskName, this);
 
@@ -500,6 +488,9 @@ public class Task extends Service
     }
     String taskName = thread.getName();
     Task currentTask = taskMap.get(taskName);
+    if (currentTask == null) {
+      throw new IllegalThreadStateException("There is No Task for the TaskThread : " + taskName);
+    }
     return currentTask.getTaskName();
   }
 

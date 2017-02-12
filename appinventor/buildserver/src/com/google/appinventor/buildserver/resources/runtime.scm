@@ -1151,12 +1151,23 @@
 ;;; Register our form after the form is created
 (define (register-form context :: gnu.mapping.Symbol)
     (set-this-form)
-    (add-to-context-environments context (*:.form-environment *this-form*))
+    (add-to-context-environments context *this-form*:form-environment)
     (add-to-context-environment context context *this-form*)
-    (add-to-context-global-var-environments context (*:.global-var-environment *this-form*))
+    (add-to-context-global-var-environments context *this-form*:global-var-environment)
     (if *this-is-the-repl*
         (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks")))))
 
+(define (register-task task :: gnu.mapping.Symbol)
+  (if *this-is-the-repl*
+      (begin
+        (add-to-context-environments task (gnu.mapping.Environment:make (symbol->string task)))
+        (add-to-context-environment task task (SimpleReplTask:replTask))
+        (add-to-context-global-var-environments task (gnu.mapping.Environment:make (string-append (symbol->string task) "-global-vars")))
+        (add-to-context-init-thunk-environments task (gnu.mapping.Environment:make (string-append (symbol->string task) "-init-thunks"))))
+      (let ((this-task (SimpleTask:getTask (symbol->string task))))
+        (add-to-context-environments task this-task:task-environment)
+        (add-to-context-environment task task this-task)
+        (add-to-context-global-var-environments task this-task:global-var-environment))))
 
 ;; The following environments are really just for testing.
 (define *test-environment* (gnu.mapping.Environment:make 'test-env))
@@ -1198,9 +1209,22 @@
         (set! *test-global-var-environment* (gnu.mapping.Environment:make 'test-global-var-env)))))
 
 (define (reset-task-environment task :: gnu.mapping.Symbol object)
-  (if (not (eq? (get-context-instance task) #!null))
-      (begin
-        (android-log (format #f "reset task called: ~A" task)))))
+  (let ((this-task (get-context-instance task)))
+    (if (not (eq? this-task #!null))
+        (if *this-is-the-repl*
+            (begin
+              (clear-context-environment task)
+              (add-to-context-environment task task (SimpleReplTask:replTask))
+              (clear-context-global-var-environment task))
+            (begin
+              (set! this-task:task-environment (gnu.mapping.Environment:make (symbol->string task)))
+              (add-to-environment this-task:task-environment task this-task)
+              (set! this-task:global-var-environment (gnu.mapping.Environment:make (string-append (symbol->string task) "-global-vars")))))
+        (begin
+          ;; The following is just for testing. In normal situations this-task should be non-null
+          (set! *test-environment* (gnu.mapping.Environment:make 'test-env))
+          (*:addParent (KawaEnvironment:getCurrent) *test-environment*)
+          (set! *test-global-var-environment* (gnu.mapping.Environment:make 'test-global-var-env))))))
 
 
 (define-syntax foreach
