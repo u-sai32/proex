@@ -78,6 +78,8 @@ Blockly.Yail.YAIL_EMPTY_LIST = "'()";
 Blockly.Yail.YAIL_OPEN_BLOCK = "(";
 Blockly.Yail.YAIL_OPEN_COMBINATION = "(";
 Blockly.Yail.YAIL_QUOTE = "'";
+Blockly.Yail.YAIL_REGISTER_FORM = "(register-form ";
+Blockly.Yail.YAIL_REGISTER_TASK = "(register-task ";
 Blockly.Yail.YAIL_RENAME_COMPONENT = "(rename-component ";
 Blockly.Yail.YAIL_SET_AND_COERCE_PROPERTY = "(set-and-coerce-property! ";
 Blockly.Yail.YAIL_SET_AND_COERCE_COMPONENT_TYPE_PROPERTY = "(set-and-coerce-property-and-check! ";
@@ -463,6 +465,8 @@ Blockly.Yail.getFormPropertiesLines = function(formName, componentJson, includeC
   if (includeComments) {
     code.push(Blockly.Yail.YAIL_COMMENT_MAJOR + formName + Blockly.Yail.YAIL_LINE_FEED);
   }
+  var doAfterCreation = Blockly.Yail.YAIL_DO_AFTER_FORM_CREATION + formName + Blockly.Yail.YAIL_LINE_FEED
+    + Blockly.Yail.YAIL_SPACER + Blockly.Yail.YAIL_REGISTER_FORM + Blockly.Yail.YAIL_QUOTE + formName + Blockly.Yail.YAIL_CLOSE_BLOCK;
   var yailForComponentProperties = Blockly.Yail.getPropertySettersLines(componentJson, formName);
   if (yailForComponentProperties.length > 0) {
     // getPropertySettersLine returns an array of lines.  So we need to 
@@ -470,9 +474,10 @@ Blockly.Yail.getFormPropertiesLines = function(formName, componentJson, includeC
     // WARNING:  There may be other type errors of this sort in this file, which
     // (hopefully) will be uncovered in testing. Please
     // be alert for these errors and check carefully.
-    code.push(Blockly.Yail.YAIL_DO_AFTER_FORM_CREATION + formName + Blockly.Yail.YAIL_SPACER
-      + yailForComponentProperties.join(" ") + Blockly.Yail.YAIL_CLOSE_BLOCK);
+    doAfterCreation += Blockly.Yail.YAIL_SPACER + yailForComponentProperties.join(" ");
   }
+  doAfterCreation += Blockly.Yail.YAIL_CLOSE_BLOCK;
+  code.push(doAfterCreation);
   return code;
 }
 
@@ -490,6 +495,8 @@ Blockly.Yail.getTaskPropertiesLines = function(taskName, componentJson, includeC
   if (includeComments) {
     code.push(Blockly.Yail.YAIL_COMMENT_MAJOR + taskName + Blockly.Yail.YAIL_LINE_FEED);
   }
+  var doAfterCreation = Blockly.Yail.YAIL_DO_AFTER_TASK_CREATION + taskName + Blockly.Yail.YAIL_LINE_FEED + "(android-log \"yail do after creation\")"
+    + Blockly.Yail.YAIL_SPACER + Blockly.Yail.YAIL_REGISTER_TASK + Blockly.Yail.YAIL_QUOTE + taskName + Blockly.Yail.YAIL_CLOSE_BLOCK;
   var yailForComponentProperties = Blockly.Yail.getPropertySettersLines(componentJson, taskName);
   if (yailForComponentProperties.length > 0) {
     // getPropertySettersLine returns an array of lines.  So we need to
@@ -497,9 +504,10 @@ Blockly.Yail.getTaskPropertiesLines = function(taskName, componentJson, includeC
     // WARNING:  There may be other type errors of this sort in this file, which
     // (hopefully) will be uncovered in testing. Please
     // be alert for these errors and check carefully.
-    code.push(Blockly.Yail.YAIL_DO_AFTER_TASK_CREATION + taskName + Blockly.Yail.YAIL_SPACER
-      + yailForComponentProperties.join(" ") + Blockly.Yail.YAIL_CLOSE_BLOCK);
+    doAfterCreation += Blockly.Yail.YAIL_SPACER + yailForComponentProperties.join(" ");
   }
+  doAfterCreation += Blockly.Yail.YAIL_CLOSE_BLOCK;
+  code.push(doAfterCreation);
   return code;
 }
 

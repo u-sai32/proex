@@ -220,6 +220,7 @@
 (define (get-context-instance context :: gnu.mapping.Symbol)
     (get-from-context-environment context context))
 
+
 ;;; (gen-simple-component-type Label)
 ;;; ==> "com.google.appinventor.components.runtime.Label"
 (define-syntax gen-simple-component-type
@@ -481,7 +482,7 @@
        (module-extends subclass-name)
        (module-name class-name)
        (module-static form-name)
-       (require <com.google.youngandroid.runtime>)
+       ;;(require <com.google.youngandroid.runtime>)
 
        (define *debug-form* #f)
 
@@ -758,7 +759,7 @@
        (module-extends subclass-name)
        (module-name class-name)
        (module-static task-name)
-       (require <com.google.youngandroid.runtime>)
+       ;;(require <com.google.youngandroid.runtime>)
 
        (define *debug-task* #t)
 
@@ -770,7 +771,6 @@
        ;; As noted near the top of this file it is useful for attaching the environment to the REPL.
        (define task-environment :: gnu.mapping.Environment
          (gnu.mapping.Environment:make (symbol->string 'task-name)))
-
 
        (define (add-to-task-environment name :: gnu.mapping.Symbol object)
          (android-log-task (format #f "Adding ~A to env ~A with value ~A" name task-environment object))
@@ -1135,7 +1135,7 @@
 (define-syntax do-after-form-creation
   (syntax-rules ()
     ((_ form expr ...)
-     (begin (register-form 'form)
+     (begin
          (if *this-is-the-repl*
              (begin expr ...)
              (add-to-form-do-after-creation (delay (begin expr ...))))))))
@@ -1143,7 +1143,7 @@
 (define-syntax do-after-task-creation
   (syntax-rules ()
     ((_ task expr ...)
-     (begin (register-task 'task)
+     (begin
          (if *this-is-the-repl*
              (begin expr ...)
              (add-to-task-do-after-creation (delay (begin expr ...))))))))
@@ -1158,36 +1158,24 @@
         (add-to-context-init-thunk-environments context (gnu.mapping.Environment:make (string-append (symbol->string context) "-init-thunks")))))
 
 (define (register-task task :: gnu.mapping.Symbol)
+  (android-log "called register task")
   (if *this-is-the-repl*
       (begin
         (add-to-context-environments task (gnu.mapping.Environment:make (symbol->string task)))
-        (add-to-context-environment task task (SimpleReplTask:replTask))
+        (add-to-context-environment task task SimpleReplTask:replTask)
         (add-to-context-global-var-environments task (gnu.mapping.Environment:make (string-append (symbol->string task) "-global-vars")))
         (add-to-context-init-thunk-environments task (gnu.mapping.Environment:make (string-append (symbol->string task) "-init-thunks"))))
       (let ((this-task (SimpleTask:getTask (symbol->string task))))
         (add-to-context-environments task this-task:task-environment)
         (add-to-context-environment task task this-task)
-        (add-to-context-global-var-environments task this-task:global-var-environment))))
+        (add-to-context-global-var-environments task this-task:global-var-environment)))
+  (android-log "successfully registered task"))
 
 ;; The following environments are really just for testing.
 (define *test-environment* (gnu.mapping.Environment:make 'test-env))
 (define *test-global-var-environment* (gnu.mapping.Environment:make 'test-global-var-env))
 
 
-(define (add-to-current-context-environment name :: gnu.mapping.Symbol object)
-  (add-to-context-environment (get-current-context-symbol) name object))
-
-(define (lookup-in-current-context-environment name :: gnu.mapping.Symbol #!optional (default-value #f))
-  (lookup-in-context-environment (get-current-context-symbol) name default-value))
-
-(define (delete-from-current-context-environment name :: gnu.mapping.Symbol)
-  (delete-from-context-environment (get-current-context-symbol) name))
-
-(define (rename-in-context-environment context :: gnu.mapping.Symbol old-name :: gnu.mapping.Symbol new-name :: gnu.mapping.Symbol)
-    (when (not (eqv? old-name new-name))
-        (let ((old-value (lookup-in-context-environment context old-name)))
-            (add-to-context-environment context new-name old-value)
-            (remove-from-context-environment context old-name))))
 
 (define (reset-current-form-environment) 
   (if (not (eq? *this-form* #!null))
@@ -1208,23 +1196,19 @@
         (*:addParent (KawaEnvironment:getCurrent) *test-environment*)
         (set! *test-global-var-environment* (gnu.mapping.Environment:make 'test-global-var-env)))))
 
-(define (reset-task-environment task :: gnu.mapping.Symbol object)
+(define (reset-task-environment task :: gnu.mapping.Symbol)
+  (android-log "reset-task-environment called")
   (let ((this-task (get-context-instance task)))
     (if (not (eq? this-task #!null))
         (if *this-is-the-repl*
             (begin
               (clear-context-environment task)
-              (add-to-context-environment task task (SimpleReplTask:replTask))
+              (add-to-context-environment task task SimpleReplTask:replTask)
               (clear-context-global-var-environment task))
             (begin
               (set! this-task:task-environment (gnu.mapping.Environment:make (symbol->string task)))
               (add-to-environment this-task:task-environment task this-task)
-              (set! this-task:global-var-environment (gnu.mapping.Environment:make (string-append (symbol->string task) "-global-vars")))))
-        (begin
-          ;; The following is just for testing. In normal situations this-task should be non-null
-          (set! *test-environment* (gnu.mapping.Environment:make 'test-env))
-          (*:addParent (KawaEnvironment:getCurrent) *test-environment*)
-          (set! *test-global-var-environment* (gnu.mapping.Environment:make 'test-global-var-env))))))
+              (set! this-task:global-var-environment (gnu.mapping.Environment:make (string-append (symbol->string task) "-global-vars"))))))))
 
 
 (define-syntax foreach
@@ -2959,8 +2943,12 @@ list, use the make-yail-list constructor with no arguments.
     (com.google.appinventor.components.runtime.EventDispatcher:unregisterAllEventsOfContext (get-current-context-name))
     (*:clear *this-form*)))
 
-(define (clear-task task)
-  (android-log (format #f "clear task called: ~A" task)))
+(define (clear-task task :: gnu.mapping.Symbol)
+  (android-log "clear task called")
+  (let ((this-task (get-context-instance task)))
+    (when (not (eq? this-task #!null))
+          (reset-task-environment task)
+          (com.google.appinventor.components.runtime.EventDispatcher:unregisterAllEventsOfContext (symbol->string task)))))
 
 ;; Used by the repl to set the name of the form
 (define (set-form-name form-name)
@@ -2982,6 +2970,57 @@ list, use the make-yail-list constructor with no arguments.
 ;;;; End Support for REPL
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
+
+(define (add-to-current-context-environment name :: gnu.mapping.Symbol object)
+  (add-to-context-environment (get-current-context-symbol) name object))
+
+(define (remove-from-current-context-environment name :: gnu.mapping.Symbol)
+  (remove-from-context-environment (get-current-context-symbol) name))
+
+(define (is-bound-in-current-context-environment name :: gnu.mapping.Symbol)
+  (is-bound-in-context-environment (get-current-context-symbol) name))
+
+(define (get-from-current-context-environment name :: gnu.mapping.Symbol)
+  (get-from-currrent-context-environment (get-current-context-symbol) name))
+
+(define (lookup-in-current-context-environment name :: gnu.mapping.Symbol #!optional (default-value #f))
+  (lookup-in-context-environment (get-current-context-symbol) name default-value))
+
+(define (rename-in-context-environment context :: gnu.mapping.Symbol old-name :: gnu.mapping.Symbol new-name :: gnu.mapping.Symbol)
+  (when (not (eqv? old-name new-name))
+        (let ((old-value (lookup-in-context-environment context old-name)))
+          (add-to-context-environment context new-name old-value)
+          (remove-from-context-environment context old-name))))
+
+(define (is-current-context-form) :: boolean
+  (if (eq? (android.os.Looper:myLooper) (android.os.Looper:getMainLooper))
+      #t
+      #f))
+
+(define (is-current-context-task) :: boolean
+  (if (instance? (java.lang.Thread:currentThread) <com.google.appinventor.components.runtime.Task$TaskThread>)
+      #t
+      #f))
+
+(define (get-current-context-name) :: <java.lang.String>
+  (cond
+   ((is-current-context-form)
+    (let ((current-context (SimpleForm:getActiveForm)))
+      (current-context:getFormName)))
+   ((is-current-context-task)
+    (SimpleTask:getCurrentTaskName))))
+
+(define (get-current-context-symbol) :: <gnu.mapping.Symbol>
+  (string->symbol (get-current-context-name)))
+
+(define (get-current-context-instance)
+  (cond
+   ((is-current-context-form)
+    (SimpleForm:getActiveForm))
+   ((is-current-context-task)
+    (SimpleTask:getCurrentTask))))
+
+
 (define *ui-handler* #!null)
 (define *this-form* #!null)
 
@@ -2993,7 +3032,6 @@ list, use the make-yail-list constructor with no arguments.
   (set-this-form)
   (set! *ui-handler* (android.os.Handler)))
 
-
 ;; Each time an event handler is executed, *this-form* must be set to the active
 ;; form so that we have the correct environment for looking up symbols.
 ;; Note that set-this-form is called from init-runtime (above) and from each
@@ -3002,30 +3040,7 @@ list, use the make-yail-list constructor with no arguments.
 (define (set-this-form)
   (set! *this-form* (SimpleForm:getActiveForm)))
 
-(define (is-current-context-form) :: boolean
-  (if (eq? (android.os.Looper:myLooper) (android.os.Looper:getMainLooper))
-    #t
-    #f))
 
-(define (is-current-context-task) :: boolean
-  (if (instance? (java.lang.Thread:currentThread) <com.google.appinventor.components.runtime.Task$TaskThread>)
-      #t
-      #f))
-
-(define (get-current-context-name) :: <java.lang.String>
-    (cond
-        ((is-current-context-form)
-            (let ((current-context (SimpleForm:getActiveForm)))
-                (current-context:getFormName)))
-        ((is-current-context-task)
-            (SimpleTask:getCurrentTaskName))))
-
-(define (get-current-context-symbol) :: <gnu.mapping.Symbol>
-    (string->symbol (get-current-context-name)))
-
-(define (get-current-context-instance)
-    (let ((current-context-name (get-current-context-symbol)))
-        (get-context-instance current-context-name)))
 
 ;; For Testing
 ;; Rather than hacking tests into a Java tests we're puting low-cost tests of

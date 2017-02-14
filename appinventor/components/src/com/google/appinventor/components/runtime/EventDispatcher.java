@@ -160,6 +160,7 @@ public class EventDispatcher {
    */
   // Don't delete this method. It's called from runtime.scm.
   public static void unregisterAllEventsForDelegation() {
+    Log.i("EventDispatcher", "unregisterAllEventsForDelegation");
     for (EventRegistry er : mapContextToEventRegistry.values()) {
       er.eventClosuresMap.clear();
     }
@@ -171,6 +172,7 @@ public class EventDispatcher {
    */
   // Don't delete this method. It's called from runtime.scm.
   public static void unregisterAllEventsOfContext(String contextName) {
+    Log.i("EventDispatcher", "unregisterAllEventsOfContext : " + contextName);
     EventRegistry er = mapContextToEventRegistry.get(contextName);
     if (er != null) {
       er.eventClosuresMap.clear();

@@ -171,7 +171,7 @@ Blockly.ReplMgr.buildYail = function() {
             if (!phoneState.tasks[contextName] || phoneState.tasks[contextName].componentYail != code) {
                 needinitialize = true;
                 phoneState.tasks[contextName].blocksYail = {};
-                this.putYail(contextInfo, Blockly.Yail.YAIL_CLEAR_TASK + contextName + Blockly.Yail.YAIL_CLOSE_COMBINATION);
+                this.putYail(contextInfo, Blockly.Yail.YAIL_CLEAR_TASK + Blockly.Yail.YAIL_QUOTE + contextName + Blockly.Yail.YAIL_CLOSE_COMBINATION);
                 this.putYail(contextInfo, code);
                 phoneState.tasks[contextName].componentYail = code;
             }
@@ -329,6 +329,7 @@ Blockly.ReplMgr.pollYail = function() {
 };
 
 Blockly.ReplMgr.resetYail = function(partial, all) {
+    console.log("entered reset");
     var phoneState = window.parent.ReplState.phoneState;
     if (!phoneState) {
         window.parent.ReplState.phoneState = {
@@ -373,6 +374,7 @@ Blockly.ReplMgr.resetYail = function(partial, all) {
             delete phoneState[context];
         }
     }
+    console.log("done reset");
     this.putYail.reset();
 };
 

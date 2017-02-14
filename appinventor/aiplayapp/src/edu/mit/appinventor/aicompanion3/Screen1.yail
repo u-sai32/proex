@@ -19,6 +19,7 @@ $Source $Yail
 ;;; Screen1
 
 (do-after-form-creation Screen1
+ (register-form 'Screen1)'
  (set-and-coerce-property! 'Screen1 'AlignHorizontal 3 'number)
  (set-and-coerce-property! 'Screen1 'BackgroundColor #x00FFFFFF 'number)
  (set-and-coerce-property! 'Screen1 'BackgroundImage "mooning.png" 'text)
