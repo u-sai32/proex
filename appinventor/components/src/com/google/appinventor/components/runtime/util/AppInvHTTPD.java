@@ -149,7 +149,7 @@ public class AppInvHTTPD extends NanoHTTPD {
         Log.d(LOG_TAG, "Computed Mac = " + compMac);
         Log.d(LOG_TAG, "Incoming seq = " + inSeq);
         Log.d(LOG_TAG, "Computed seq = " + seq);
-        boolean _secure = false; // resecure this!
+        boolean _secure = true; // resecure this!
         if (!inMac.equals(compMac) && _secure) {
           Log.e(LOG_TAG, "Hmac does not match");
           form.dispatchErrorOccurredEvent(form, "AppInvHTTPD",
@@ -194,7 +194,7 @@ public class AppInvHTTPD extends NanoHTTPD {
         contextCode = "(begin (require <com.google.youngandroid.runtime>) (process-repl-form-input " + contextBlockId +
                 " (begin " +  contextCode + " )))";
       } else if (contextType.equals("Task")) {
-        contextCode =  "(begin (require <com.google.youngandroid.runtime>) (process-repl-task-input " + contextBlockId +
+        contextCode =  "(begin (require <com.google.youngandroid.runtime>) (process-repl-task-input \"" + contextName + "\" " + contextBlockId +
                 " (begin " + contextCode + " )))";
       }
 

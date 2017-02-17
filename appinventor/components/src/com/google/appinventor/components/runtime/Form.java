@@ -18,15 +18,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import android.content.*;
 import android.os.Message;
+import android.support.v4.content.LocalBroadcastManager;
 import org.json.JSONException;
 
 import android.app.Activity;
 import android.app.Dialog;
 import android.app.ProgressDialog;
-import android.content.ActivityNotFoundException;
-import android.content.Context;
-import android.content.Intent;
 import android.content.pm.ActivityInfo;
 import android.content.res.Configuration;
 import android.graphics.PorterDuff;
@@ -246,6 +245,18 @@ public class Form extends Activity
     }
 
   }
+
+  private BroadcastReceiver broadcastReceiver = new BroadcastReceiver() {
+    @Override
+    public void onReceive(Context context, Intent intent) {
+        String taskName = intent.getStringExtra("task");
+        String resultString = intent.getStringExtra("message");
+        Log.d(LOG_TAG,"Received from Task: " + taskName + " message: " + resultString);
+        Object resultObject = Form.decodeJSONStringForForm(resultString, "receive from task");
+        ReceivedFromTask(taskName, resultObject);
+
+    }
+  };
 
   protected FormHandler formHandler;
 
@@ -578,6 +589,8 @@ public class Form extends Activity
     Log.i(LOG_TAG, "Form " + formName + " got onResume");
     activeForm = this;
 
+    LocalBroadcastManager.getInstance(this).registerReceiver(broadcastReceiver, new IntentFilter(Task.LOCAL_ACTION_SEND_MESSAGE));
+
     // If applicationIsBeingClosed is true, call closeApplication() immediately to continue
     // unwinding through all forms of a multi-screen application.
     if (applicationIsBeingClosed) {
@@ -620,6 +633,7 @@ public class Form extends Activity
   @Override
   protected void onPause() {
     super.onPause();
+    LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver);
     Log.i(LOG_TAG, "Form " + formName + " got onPause");
     for (OnPauseListener onPauseListener : onPauseListeners) {
       onPauseListener.onPause();
@@ -1563,6 +1577,13 @@ public class Form extends Activity
     Log.i(LOG_TAG, "Form " + formName + " OtherScreenClosed, otherScreenName = " +
         otherScreenName + ", result = " + result.toString());
     EventDispatcher.dispatchEvent(this, "OtherScreenClosed", otherScreenName, result);
+  }
+
+  // Task
+  @SimpleEvent(description = "Event raised when a Task sends a message")
+  public void ReceivedFromTask(String task, Object message) {
+    Log.i(LOG_TAG, "Form " + formName + " ReceiveFromTask, task = " + task + ", message = " + message.toString());
+    EventDispatcher.dispatchEvent(this,"ReceiveFromTask", task, message);
   }
 
 

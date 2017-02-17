@@ -4627,6 +4627,11 @@ public interface OdeMessages extends Messages {
   @Description("")
   String TaskStartedEvents();
 
+  @DefaultMessage("ReceivedFromTask")
+  @Description("")
+  String ReceivedFromTaskEvents();
+
+
   //Methods
   @DefaultMessage("ResolveActivity")
   @Description("")
@@ -5639,6 +5644,11 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("StopTask")
   @Description("")
   String StopTaskMethods();
+
+  @DefaultMessage("SendToScreen")
+  @Description("")
+  String SendToScreenMethods();
+
 
   //Mock Components
   @DefaultMessage("add items...")

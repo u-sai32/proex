@@ -274,7 +274,6 @@ Blockly.Yail.getproperty = function(instanceName) {
   var propertyName = this.getFieldValue("PROP");
   var propType = this.getPropertyObject(propertyName).type;
   var code = Blockly.Yail.YAIL_GET_PROPERTY
-    + Blockly.Yail.YAIL_QUOTE + Blockly.Yail.contextName + Blockly.Yail.YAIL_SPACER
     + Blockly.Yail.YAIL_QUOTE
     + this.getFieldValue("COMPONENT_SELECTOR")
     + Blockly.Yail.YAIL_SPACER
@@ -297,7 +296,6 @@ Blockly.Yail.genericGetproperty = function(typeName) {
   var propertyName = this.getFieldValue("PROP");
   var propType = this.getPropertyObject(propertyName).type;
   var code = Blockly.Yail.YAIL_GET_COMPONENT_TYPE_PROPERTY
-    + Blockly.Yail.YAIL_QUOTE + Blockly.Yail.contextName + Blockly.Yail.YAIL_SPACER
     // TODO(hal, andrew): check for empty socket and generate error if necessary
     + Blockly.Yail.valueToCode(this, 'COMPONENT', Blockly.Yail.ORDER_NONE)
     + Blockly.Yail.YAIL_SPACER
