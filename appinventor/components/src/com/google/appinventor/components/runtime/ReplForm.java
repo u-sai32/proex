@@ -56,7 +56,6 @@ public class ReplForm extends Form {
   public void onCreate(Bundle icicle) {
     super.onCreate(icicle);
     Log.d(LOG_TAG,"onCreate");
-    Log.d(LOG_TAG, "ReplForm Thread Name : " + Thread.currentThread());
     loadedExternalDexs = new ArrayList<String>();
     Intent intent = getIntent();
     processExtras(intent, false);

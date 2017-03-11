@@ -1325,9 +1325,9 @@ public interface OdeMessages extends Messages {
   @Description("Text for task type choice 'Quick Task'")
   String quickTaskType();
 
-  @DefaultMessage("Long Task")
-  @Description("Text for task type choice 'Long Task'")
-  String longTaskType();
+  @DefaultMessage("Sticky Task")
+  @Description("Text for task type choice 'Sticky Task'")
+  String stickyTaskType();
 
   @DefaultMessage("Repeating Task")
   @Description("Text for task type choice 'Repeating Task'")

@@ -149,8 +149,7 @@ public class AppInvHTTPD extends NanoHTTPD {
         Log.d(LOG_TAG, "Computed Mac = " + compMac);
         Log.d(LOG_TAG, "Incoming seq = " + inSeq);
         Log.d(LOG_TAG, "Computed seq = " + seq);
-        boolean _secure = true; // resecure this!
-        if (!inMac.equals(compMac) && _secure) {
+        if (!inMac.equals(compMac)) {
           Log.e(LOG_TAG, "Hmac does not match");
           form.dispatchErrorOccurredEvent(form, "AppInvHTTPD",
             ErrorMessages.ERROR_REPL_SECURITY_ERROR, "Invalid HMAC");

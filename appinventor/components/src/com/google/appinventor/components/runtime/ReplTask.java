@@ -61,7 +61,7 @@ public class ReplTask extends Task {
     };
     runTaskCode(taskName, runnable);
     Log.d("Task", "Done Dispatch about to Return");
-    return START_STICKY;
+    return START_NOT_STICKY;
   }
 
 

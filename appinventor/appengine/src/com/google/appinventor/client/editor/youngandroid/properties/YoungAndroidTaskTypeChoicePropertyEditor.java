@@ -14,7 +14,7 @@ public class YoungAndroidTaskTypeChoicePropertyEditor extends ChoicePropertyEdit
   // Button shape choices
   private static final Choice[] types = new Choice[] {
       new Choice(MESSAGES.quickTaskType(), "0"),
-      new Choice(MESSAGES.longTaskType(), "1"),
+      new Choice(MESSAGES.stickyTaskType(), "1"),
       new Choice(MESSAGES.repeatingTaskType(), "2")
   };
 

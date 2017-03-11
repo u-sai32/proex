@@ -17,7 +17,13 @@ import android.util.Log;
 
 import android.support.v4.content.LocalBroadcastManager;
 
-import com.google.appinventor.components.annotations.*;
+import com.google.appinventor.components.annotations.DesignerComponent;
+import com.google.appinventor.components.annotations.SimpleObject;
+import com.google.appinventor.components.annotations.UsesPermissions;
+import com.google.appinventor.components.annotations.DesignerProperty;
+import com.google.appinventor.components.annotations.SimpleProperty;
+import com.google.appinventor.components.annotations.SimpleFunction;
+import com.google.appinventor.components.annotations.SimpleEvent;
 import com.google.appinventor.components.common.ComponentCategory;
 import com.google.appinventor.components.common.PropertyTypeConstants;
 import com.google.appinventor.components.common.YaVersion;
@@ -175,7 +181,7 @@ public class Task extends Service
     };
     taskThread.getTaskHandler().post(command);
     Log.d("Task", "Done Dispatch about to Return");
-    return START_STICKY;
+    return START_NOT_STICKY;
   }
 
   @SimpleEvent(description = "Task has been started")
@@ -224,7 +230,7 @@ public class Task extends Service
     // for debugging and future growth
     Log.i(LOG_TAG, "Task " + taskName + " got onDestroy");
 
-    // Unregister events for components in this form.
+    // Unregister events for components in this task.
     EventDispatcher.removeDispatchContext(this.getDispatchContext());
   }
 
