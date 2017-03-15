@@ -460,10 +460,14 @@
   <!-- =====================================================================
        ExternalComponentGenerator: create required extension files
        ===================================================================== -->
+  <property  name="buildserver.files.library.dir" location="../buildserver/build/classes/BuildServer/files"/>
+
+  <taskdef resource="proguard/ant/task.properties"
+           classpath="${lib.dir}/proguard-5.3.2/proguard.jar" />
+
   <target name="ExternalComponentGenerator"
           description="generate extension files"
           depends="AndroidRuntime, JsonComponentDescription, ComponentList">
-    <property  name="buildserver.files.library.dir" location="../buildserver/build/classes/BuildServer/files"/>
     <mkdir dir="${ExternalComponentGenerator-class.dir}" />
     <mkdir dir="${ExternalComponent.dir}" />
     <mkdir dir="${ExternalComponent-class.dir}" />
@@ -485,6 +489,51 @@
         <pathelement location="${lib.dir}/json/json.jar" />
       </classpath>
     </java>
+
+    <!-- ProGuard -->
+    <foreach target="proguard" param="extension" inheritall="true">
+      <path>
+        <dirset dir="${ExternalComponent-class.dir}">
+          <include name="*" />
+        </dirset>
+      </path>
+    </foreach>
+
+  </target>
+
+  <target name="proguard">
+    <basename property="extensionClassFolder" file="${extension}" />
+    <mkdir dir="${ExternalComponent-class.dir}/${extensionClassFolder}/classes-proguard" />
+    <proguard>
+      -injars ${ExternalComponent-class.dir}/${extensionClassFolder}(**.class)
+      -outjars ${ExternalComponent-class.dir}/${extensionClassFolder}/classes-proguard(**.class)
+
+      -libraryjars ${ExternalComponent-class.dir}/${extensionClassFolder}(**.jar)
+      -libraryjars ${buildserver.files.library.dir}/android.jar
+      -libraryjars ${buildserver.files.library.dir}/AndroidRuntime.jar
+
+      -dontshrink
+      -dontoptimize
+      -dontpreverify
+
+      -keep @com.google.appinventor.components.annotations.SimpleObject class * {
+        @com.google.appinventor.components.annotations.SimpleFunction
+        &lt;methods&gt;;
+        @com.google.appinventor.components.annotations.SimpleProperty
+        &lt;methods&gt;;
+        @com.google.appinventor.components.annotations.SimpleEvent
+        &lt;methods&gt;;
+      }
+
+      <!-- Keep names - Native method names. Keep all native class/method names. -->
+      -keepclasseswithmembers,includedescriptorclasses,allowshrinking class * {
+        native &lt;methods&gt;;
+      }
+    </proguard>
+
+    <move todir="${ExternalComponent-class.dir}/${extensionClassFolder}">
+      <fileset dir="${ExternalComponent-class.dir}/${extensionClassFolder}/classes-proguard"/>
+    </move>
   </target>
 
   <!-- =====================================================================
@@ -546,7 +595,7 @@
     </foreach>
   </target>
 
-  <target name="dexExtension" depends="">
+  <target name="dexExtension">
     <basename property="extensionType" file="${extension}" suffix=".jar"/>
     <java jar="${lib.dir}/android/tools/dx.jar"
           fork="true"
