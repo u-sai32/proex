@@ -136,14 +136,15 @@ public class ExternalComponentGenerator {
     String  extensionFileDirPath = extensionDirPath + File.separator + "files";
     JSONArray librariesNeeded = componentBuildInfo.getJSONArray("libraries");
     String extensionClassPath = componentType.substring(0,componentType.lastIndexOf(".")).replace('.', File.separatorChar);
-    String extensionTempClassDirPath = extensionTempDirPath + File.separator + extensionClassPath;
+    String extensionTempClassDirPath = extensionTempDirPath + File.separator + "classes" + File.separator + extensionClassPath;
     new File(extensionTempClassDirPath).mkdirs();
     copyRelatedExternalClasses(androidRuntimeClassDirPath, componentType, extensionTempClassDirPath);
 
+    new File(extensionTempDirPath + File.separator + "libraries").mkdirs();
     for (int j = 0; j < librariesNeeded.length(); ++j) { // Copy Library files for Unjar and Jaring
       String library = librariesNeeded.getString(j);
       copyFile(buildServerClassDirPath + File.separator + library,
-          extensionTempDirPath + File.separator + library);
+          extensionTempDirPath + File.separator + "libraries" + File.separator + library);
     }
 
 //      copyFile(externalComponentsTempDirPath + File.separator + componentType + ".jar",

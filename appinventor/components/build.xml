@@ -491,6 +491,7 @@
     </java>
 
     <!-- ProGuard -->
+
     <foreach target="proguard" param="extension" inheritall="true">
       <path>
         <dirset dir="${ExternalComponent-class.dir}">
@@ -505,13 +506,14 @@
     <basename property="extensionClassFolder" file="${extension}" />
     <mkdir dir="${ExternalComponent-class.dir}/${extensionClassFolder}/classes-proguard" />
     <proguard>
-      -injars ${ExternalComponent-class.dir}/${extensionClassFolder}(**.class)
+      -injars ${ExternalComponent-class.dir}/${extensionClassFolder}/classes(**.class)
       -outjars ${ExternalComponent-class.dir}/${extensionClassFolder}/classes-proguard(**.class)
 
-      -libraryjars ${ExternalComponent-class.dir}/${extensionClassFolder}(**.jar)
+      -libraryjars ${ExternalComponent-class.dir}/${extensionClassFolder}/libraries
       -libraryjars ${buildserver.files.library.dir}/android.jar
       -libraryjars ${buildserver.files.library.dir}/AndroidRuntime.jar
 
+      -dontusemixedcaseclassnames
       -dontshrink
       -dontoptimize
       -dontpreverify
@@ -531,7 +533,7 @@
       }
     </proguard>
 
-    <move todir="${ExternalComponent-class.dir}/${extensionClassFolder}">
+    <move todir="${ExternalComponent-class.dir}/${extensionClassFolder}/classes">
       <fileset dir="${ExternalComponent-class.dir}/${extensionClassFolder}/classes-proguard"/>
     </move>
   </target>
@@ -551,8 +553,8 @@
 
   <target name="unjarExtensionLibraries">
     <basename property="extensionClassFolder" file="${extension}" />
-    <unzip dest="${ExternalComponent-class.dir}/${extensionClassFolder}">
-      <fileset dir="${ExternalComponent-class.dir}/${extensionClassFolder}">
+    <unzip dest="${ExternalComponent-class.dir}/${extensionClassFolder}/classes">
+      <fileset dir="${ExternalComponent-class.dir}/${extensionClassFolder}/libraries">
         <include name="**/*.jar" />
       </fileset>
     </unzip>
@@ -574,7 +576,7 @@
   <target name="jarExtension">
     <basename property="extensionClassFolder" file="${extension}" />
     <jar destfile="${ExternalComponent-class.dir}/${extensionClassFolder}.jar"
-         basedir="${ExternalComponent-class.dir}/${extensionClassFolder}"
+         basedir="${ExternalComponent-class.dir}/${extensionClassFolder}/classes"
          includes="**/*.class"
          excludes="*.jar" />
     <copy file="${ExternalComponent-class.dir}/${extensionClassFolder}.jar"
