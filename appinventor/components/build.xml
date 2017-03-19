@@ -526,9 +526,12 @@
         @com.google.appinventor.components.annotations.SimpleEvent
         &lt;methods&gt;;
       }
+      <!-- Keep all classes -->
+      -keep class * {
+      }
 
       <!-- Keep names - Native method names. Keep all native class/method names. -->
-      -keepclasseswithmembers,includedescriptorclasses,allowshrinking class * {
+      -keepclasseswithmembers,includedescriptorclasses class * {
         native &lt;methods&gt;;
       }
     </proguard>
