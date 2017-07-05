@@ -308,7 +308,7 @@ Blockly.ComponentInstances.getInstanceNames = function() {
 }
 
 Blockly.Component.instanceNameToTypeName = function(instanceName) {
-  return window.parent.BlocklyPanel_getComponentInstanceTypeName(Blockly.BlocklyEditor.formName,instanceName);
+  return window.parent.BlocklyPanel_getComponentInstanceTypeName(Blockly.BlocklyEditor.contextName, instanceName);
 }
 
 

@@ -1,6 +1,6 @@
 // -*- mode: java; c-basic-offset: 2; -*-
 // Copyright 2009-2011 Google, All Rights reserved
-// Copyright 2011-2012 MIT, All rights reserved
+// Copyright 2011-2017 MIT, All rights reserved
 // Released under the Apache License, Version 2.0
 // http://www.apache.org/licenses/LICENSE-2.0
 
@@ -54,6 +54,7 @@ public abstract class YoungAndroidSourceNode extends SourceNode {
   public static String getQualifiedName(String sourceFileId) {
     Preconditions.checkArgument(sourceFileId.startsWith(SRC_PREFIX) && (
         sourceFileId.endsWith(YoungAndroidSourceAnalyzer.FORM_PROPERTIES_EXTENSION) ||
+        sourceFileId.endsWith(YoungAndroidSourceAnalyzer.TASK_PROPERTIES_EXTENSION) ||
         sourceFileId.endsWith(YoungAndroidSourceAnalyzer.CODEBLOCKS_SOURCE_EXTENSION) ||
         sourceFileId.endsWith(YoungAndroidSourceAnalyzer.BLOCKLY_SOURCE_EXTENSION) ||
         sourceFileId.endsWith(YoungAndroidSourceAnalyzer.YAIL_FILE_EXTENSION)));
@@ -66,8 +67,8 @@ public abstract class YoungAndroidSourceNode extends SourceNode {
   /**
    * Returns the form name associated with this source node.
    */
-  public String getFormName() {
-    return getFormName(getFileId());
+  public String getContextName() {
+    return getContextName(getFileId());
   }
 
   /**
@@ -82,7 +83,7 @@ public abstract class YoungAndroidSourceNode extends SourceNode {
    * Note that the extension of the fileId is ignored, so this works for both form (.scm) files and
    * blocks (.blk) files.
    */
-  public static String getFormName(String fileId) {
+  public static String getContextName(String fileId) {
     return StorageUtil.trimOffExtension(StorageUtil.basename(fileId));
   }
 
@@ -92,6 +93,6 @@ public abstract class YoungAndroidSourceNode extends SourceNode {
    * blocks (.blk) files.
    */
   public static boolean isScreen1(String fileId) {
-    return getFormName(fileId).equals(SCREEN1_FORM_NAME);
+    return getContextName(fileId).equals(SCREEN1_FORM_NAME);
   }
 }

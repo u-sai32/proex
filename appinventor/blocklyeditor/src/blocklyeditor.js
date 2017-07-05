@@ -17,7 +17,7 @@ goog.provide('Blockly.BlocklyEditor');
 goog.require('Blockly.Drawer');
 goog.require('Blockly.TypeBlock');
 
-Blockly.BlocklyEditor.startup = function(documentBody, formName) {
+Blockly.BlocklyEditor.startup = function(documentBody, contextName) {
   var typeblock_config = {
     frame: 'ai_frame',
     typeBlockDiv: 'ai_type_block',
@@ -46,7 +46,7 @@ Blockly.BlocklyEditor.startup = function(documentBody, formName) {
   if (!Blockly.readOnly)
     Blockly.TypeBlock(Blockly.configForTypeBlock);
 
-  Blockly.BlocklyEditor.formName = formName;
+  Blockly.BlocklyEditor.contextName = contextName; // full context name of the for projectid_name
 
   /* [Added by paulmw in patch 15]
   There are three ways that you can change how lexical variables
@@ -141,7 +141,7 @@ Blockly.BlocklyEditor.startup = function(documentBody, formName) {
   Blockly.bindEvent_(Blockly.mainWorkspace.getCanvas(), 'blocklyWorkspaceChange', this,
       function() {
         if (window.parent.BlocklyPanel_blocklyWorkspaceChanged){
-          window.parent.BlocklyPanel_blocklyWorkspaceChanged(Blockly.BlocklyEditor.formName);
+          window.parent.BlocklyPanel_blocklyWorkspaceChanged(Blockly.BlocklyEditor.contextName);
         }
         // [lyn 12/31/2013] Check for duplicate component event handlers before
         // running any error handlers to avoid quadratic time behavior.

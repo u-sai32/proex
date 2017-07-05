@@ -96,7 +96,7 @@ import android.util.Log;
     category = ComponentCategory.CONNECTIVITY,
     nonVisible = true,
     iconName = "images/activityStarter.png")
-@SimpleObject
+@SimpleObject(taskCompatible = false)
 public class ActivityStarter extends AndroidNonvisibleComponent
     implements ActivityResultListener, Component, Deleteable {
 
@@ -112,7 +112,6 @@ public class ActivityStarter extends AndroidNonvisibleComponent
   private String result;
   private int requestCode;
   private YailList extras;
-  private final ComponentContainer container;
 
   /**
    * Creates a new ActivityStarter component.
@@ -120,9 +119,7 @@ public class ActivityStarter extends AndroidNonvisibleComponent
    * @param container  container, kept for access to form and context
    */
   public ActivityStarter(ComponentContainer container) {
-    super(container.$form());
-    // Save the container for later
-    this.container = container;
+    super(container);
     result = "";
     Action(Intent.ACTION_MAIN);
     ActivityPackage("");
@@ -427,6 +424,10 @@ public class ActivityStarter extends AndroidNonvisibleComponent
     resultIntent = null;
     result = "";
 
+    if (this.form == null) {
+      return;
+    }
+
     Intent intent = buildActivityIntent();
 
     if (requestCode == 0) {
@@ -442,9 +443,14 @@ public class ActivityStarter extends AndroidNonvisibleComponent
         ErrorMessages.ERROR_ACTIVITY_STARTER_NO_ACTION_INFO);
     } else {
       try {
-        container.$context().startActivityForResult(intent, requestCode);
+        if (container.$form() != null) { // Make sure we have a form
+          form.dispatchErrorOccurredEvent(this, "StartActivity",
+            ErrorMessages.ERROR_ACTIVITY_STARTER_NO_CALLING_ACTIVITY);
+          return;
+        }
+        container.$form().startActivityForResult(intent, requestCode);
         String openAnim = container.$form().getOpenAnimType();
-        AnimationUtil.ApplyOpenScreenAnimation(container.$context(), openAnim);
+        AnimationUtil.ApplyOpenScreenAnimation(container.$form(), openAnim);
       } catch (ActivityNotFoundException e) {
         form.dispatchErrorOccurredEvent(this, "StartActivity",
           ErrorMessages.ERROR_ACTIVITY_STARTER_NO_CORRESPONDING_ACTIVITY);

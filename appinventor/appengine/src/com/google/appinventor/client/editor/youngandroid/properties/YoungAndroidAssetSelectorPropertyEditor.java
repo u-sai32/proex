@@ -8,6 +8,9 @@ package com.google.appinventor.client.editor.youngandroid.properties;
 
 import com.google.appinventor.client.Ode;
 import static com.google.appinventor.client.Ode.MESSAGES;
+
+import com.google.appinventor.client.editor.simple.SimpleEditor;
+import com.google.appinventor.client.editor.youngandroid.YaContextEditor;
 import com.google.appinventor.client.editor.youngandroid.YaFormEditor;
 import com.google.appinventor.client.explorer.project.Project;
 import com.google.appinventor.client.explorer.project.ProjectChangeListener;
@@ -47,7 +50,7 @@ public final class YoungAndroidAssetSelectorPropertyEditor extends AdditionalCho
    *
    * @param editor the editor that this property editor belongs to
    */
-  public YoungAndroidAssetSelectorPropertyEditor(final YaFormEditor editor) {
+  public YoungAndroidAssetSelectorPropertyEditor(final YaContextEditor editor) {
     Project project = Ode.getInstance().getProjectManager().getProject(editor.getProjectId());
     assetsFolder = ((YoungAndroidProjectNode) project.getRootNode()).getAssetsFolder();
     project.addProjectChangeListener(this);

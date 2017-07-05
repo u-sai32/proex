@@ -186,7 +186,7 @@ public class Ode implements EntryPoint {
   // Collection of editors
   private EditorManager editorManager;
 
-  // Currently active file editor, could be a YaFormEditor or a YaBlocksEditor or null.
+  // Currently active file editor, could be a YaFormEditor or YaTaskEditor or a YaBlocksEditor or null.
   private FileEditor currentFileEditor;
 
   private AssetManager assetManager;
@@ -263,7 +263,7 @@ public class Ode implements EntryPoint {
 
   private boolean windowClosing;
 
-  private boolean screensLocked;
+  private boolean contextsLocked;
 
   private boolean galleryInitialized = false;
 
@@ -2100,17 +2100,17 @@ public class Ode implements EntryPoint {
   // in the afterSaving command called when saveDirtyEditors
   // is finished.
 
-  public boolean screensLocked() {
-    return screensLocked;
+  public boolean contextsLocked() {
+    return contextsLocked;
   }
 
-  public void lockScreens(boolean value) {
+  public void lockContexts(boolean value) {
     if (value) {
-      OdeLog.log("Locking Screens");
+      OdeLog.log("Locking Contexts");
     } else {
-      OdeLog.log("Unlocking Screens");
+      OdeLog.log("Unlocking Contexts");
     }
-    screensLocked = value;
+    contextsLocked = value;
   }
 
   /**

@@ -55,6 +55,16 @@ public @interface DesignerComponent {
   boolean nonVisible() default false;
 
   /**
+   * If true, component will be shown on the palette when working on a Screen
+   */
+  boolean compatibleWithScreens() default true;
+
+  /**
+   * If true, component will be shown on the palette when working on a Task
+   */
+  boolean compatibleWithTasks() default true;
+
+  /**
    * The file name of the icon that represents the component in the palette.
    * This should be just the last part of the path name for the file. We'll
    * look for the file in "com/google/appinventor/images/" for

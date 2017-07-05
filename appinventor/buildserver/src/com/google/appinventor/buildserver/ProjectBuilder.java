@@ -29,6 +29,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.PrintStream;
 import java.nio.charset.Charset;
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Enumeration;
@@ -175,6 +176,7 @@ public final class ProjectBuilder {
 
         // Retrieve compiler messages and convert to HTML and log
         String srcPath = projectRoot.getAbsolutePath() + "/" + PROJECT_DIRECTORY + "/../src/";
+        System.out.println("\n\nKAWA DEBUG --------\n" + output.toString(PathUtil.DEFAULT_CHARSET) + "\n---------------\n");
         String messages = processCompilerOutput(output.toString(PathUtil.DEFAULT_CHARSET),
             srcPath);
 

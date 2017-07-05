@@ -33,8 +33,6 @@ import com.google.gwt.user.client.ui.HTMLPanel;
 import com.google.gwt.user.client.ui.HorizontalPanel;
 import com.google.gwt.user.client.ui.VerticalPanel;
 import com.google.gwt.user.client.ui.Widget;
-import com.google.gwt.user.client.Timer;
-import com.google.gwt.user.client.Window;
 
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -55,8 +53,8 @@ import static com.google.appinventor.client.Ode.MESSAGES;
 public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeListener{
   public static enum OpType {ADD, REMOVE, RENAME}
 
-  // The currently displayed form (project/screen)
-  private static String currentForm;
+  // The currently displayed context (project_context)
+  private static String currentContext;
   private static String languageSetting;
 
   private static class ComponentOp {
@@ -83,13 +81,13 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     "  border: solid black 1px;\n" +
     "}\n" +
     "</style>\n" +
-    "<iframe src=\"blocklyframe.html#FORM_NAME\" class=\"svg\">";
+    "<iframe src=\"blocklyframe.html#CONTEXT_NAME\" class=\"svg\">";
 
   // Keep track of component additions/removals/renames that happen before
   // blocks editor is inited for the first time, or before reinitialization
   // after the blocks editor's project has been detached from the document.
-  // Replay them in order after initialized. Keys are form names. If there is
-  // an entry for a given form name in the map, its blocks have not yet been
+  // Replay them in order after initialized. Keys are context names. If there is
+  // an entry for a given context name in the map, its blocks have not yet been
   // (re)inited.
   // Note: Javascript is single-threaded. Since this code is compiled by GWT
   // into Javascript, we don't need to worry about concurrent access to
@@ -103,47 +101,51 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   // reloaded, causing the Blockly objects for the blocks editors
   // to be created anew. Since the FileEditor Java objects themselves are
   // not recreated, we need to reconstruct the set of components in the Blockly
-  // object when the object gets recreated. For each form, we keep track of the
-  // components currently in that form, stored as "add" operations that can be
+  // object when the object gets recreated. For each context, we keep track of the
+  // components currently in that context, stored as "add" operations that can be
   // replayed to restore those components when the underlying Blockly state
   // is re-inited. This component state is updated as components are added,
-  // removed, and renamed. The outer map is keyed by form name, and the
+  // removed, and renamed. The outer map is keyed by context name, and the
   // inner map is keyed by component uid.
   private static final Map<String, Map<String, ComponentOp>> currentComponents = Maps.newHashMap();
 
-  // Pending blocks file content, indexed by form name. Waiting to be loaded when the corresponding
+  // Pending blocks file content, indexed by context name. Waiting to be loaded when the corresponding
   // blocks area is initialized.
   private static final Map<String, String> pendingBlocksContentMap = Maps.newHashMap();
 
-  // [lyn, 2014/10/27] added formJson for upgrading
-  // Pending form JSON content, indexed by form name. Waiting to be loaded when the corresponding
+  // [lyn, 2014/10/27] added context for upgrading
+  // Pending context JSON content, indexed by context name. Waiting to be loaded when the corresponding
   // blocks area is initialized.
-  private static final Map<String, String> pendingFormJsonMap = Maps.newHashMap();
+  private static final Map<String, String> pendingContextJsonMap = Maps.newHashMap();
 
-  // Status of blocks loading, indexed by form name.
+  // Status of blocks loading, indexed by context name.
   private static final Map<String, LoadStatus> loadStatusMap = Maps.newHashMap();
+
+  // Map from a Project Id to the last opened Form for that Project.
+  // This is used while sending relatedComponentData for Yail
+  private static final Map<String, String> lastFormMap = Maps.newHashMap();
 
   // Blockly backpack
   private static String backpack = "[]";
 
-  // My form name
-  private String formName;
+  // My context name
+  private String contextName;
 
   // My blocks editor
-  private YaBlocksEditor myBlocksEditor;  // [lyn, 2014/10/28] Added to access current form json
+  private YaBlocksEditor myBlocksEditor;  // [lyn, 2014/10/28] Added to access current context json
 
   public static boolean isWarningVisible = false;
 
-  public BlocklyPanel(YaBlocksEditor blocksEditor, String formName) {
-    super(EDITOR_HTML.replace("FORM_NAME", formName));
-    this.formName = formName;
+  public BlocklyPanel(YaBlocksEditor blocksEditor, String contextName) {
+    super(EDITOR_HTML.replace("CONTEXT_NAME", contextName));
+    this.contextName = contextName;
     this.myBlocksEditor = blocksEditor;
     COMPONENT_DATABASE = SimpleComponentDatabase.getInstance(blocksEditor.getProjectId());
-    componentOps.put(formName, new ArrayList<ComponentOp>());
+    componentOps.put(contextName, new ArrayList<ComponentOp>());
     // note: using Maps.newHashMap() gives a type error in Eclipse in the following line
-    currentComponents.put(formName, new HashMap<String, ComponentOp>());
+    currentComponents.put(contextName, new HashMap<String, ComponentOp>());
     initJS();
-    OdeLog.log("Created BlocklyPanel for " + formName);
+    OdeLog.log("Created BlocklyPanel for " + contextName);
   }
 
   /*
@@ -169,72 +171,72 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * after it finishes loading. We export this method to Javascript in
    * exportInitComponentsMethod().
    */
-  private static void initBlocksArea(String formName) {
+  private static void initBlocksArea(String contextName) {
 
-    OdeLog.log("BlocklyPanel: Got initBlocksArea call for " + formName);
+    OdeLog.log("BlocklyPanel: Got initBlocksArea call for " + contextName);
 
     // if there are any components added, add them first before we load
     // block content that might reference them
 
-    Map<String, ComponentOp> savedComponents = currentComponents.get(formName);
+    Map<String, ComponentOp> savedComponents = currentComponents.get(contextName);
     if (savedComponents != null) { // shouldn't be!
       OdeLog.log("Restoring " + savedComponents.size() +
-          " previous blockly components for form " + formName);
+          " previous blockly components for context " + contextName);
       for (ComponentOp op : savedComponents.values()) {
-        doAddComponent(formName, op.typeDescription, op.instanceName, op.uid);
+        doAddComponent(contextName, op.typeDescription, op.instanceName, op.uid);
       }
     }
 
-    if (componentOps.containsKey(formName)) {
-      OdeLog.log("Replaying " + componentOps.get(formName).size() + " ops waiting in queue");
-      for (ComponentOp op : componentOps.get(formName)) {
+    if (componentOps.containsKey(contextName)) {
+      OdeLog.log("Replaying " + componentOps.get(contextName).size() + " ops waiting in queue");
+      for (ComponentOp op : componentOps.get(contextName)) {
         switch (op.op) {
           case ADD:
-            doAddComponent(formName, op.typeDescription, op.instanceName, op.uid);
-            addSavedComponent(formName, op.typeDescription, op.instanceName, op.uid);
+            doAddComponent(contextName, op.typeDescription, op.instanceName, op.uid);
+            addSavedComponent(contextName, op.typeDescription, op.instanceName, op.uid);
             break;
           case REMOVE:
-            doRemoveComponent(formName, op.typeName, op.instanceName, op.uid);
-            removeSavedComponent(formName, op.typeName, op.instanceName, op.uid);
+            doRemoveComponent(contextName, op.typeName, op.instanceName, op.uid);
+            removeSavedComponent(contextName, op.typeName, op.instanceName, op.uid);
             break;
           case RENAME:
-            doRenameComponent(formName, op.typeName, op.oldName, op.instanceName, op.uid);
-            renameSavedComponent(formName, op.typeName, op.oldName, op.instanceName, op.uid);
+            doRenameComponent(contextName, op.typeName, op.oldName, op.instanceName, op.uid);
+            renameSavedComponent(contextName, op.typeName, op.oldName, op.instanceName, op.uid);
             break;
         }
       }
-      componentOps.remove(formName);
+      componentOps.remove(contextName);
     }
 
     // If we've gotten any block content to load, load it now
     // Note: Map.remove() returns the value (null if not present), as well as removing the mapping
-    String pendingBlocksContent = pendingBlocksContentMap.remove(formName);
-    // [lyn, 2014/10/27] added formJson for upgrading
-    String pendingFormJson = pendingFormJsonMap.remove(formName);
+    String pendingBlocksContent = pendingBlocksContentMap.remove(contextName);
+    // [lyn, 2014/10/27] added contextJson for upgrading
+    String pendingContextJson = pendingContextJsonMap.remove(contextName);
     if (pendingBlocksContent != null) {
-      OdeLog.log("Loading blocks area content for " + formName);
-      loadBlocksContentNow(formName, pendingFormJson, pendingBlocksContent);
+      OdeLog.log("Loading blocks area content for " + contextName);
+      loadBlocksContentNow(contextName, pendingContextJson, pendingBlocksContent);
     }
   }
 
-  private static void blocklyWorkspaceChanged(String formName) {
-    LoadStatus loadStat = loadStatusMap.get(formName);
+  private static void blocklyWorkspaceChanged(String contextName, boolean sendRelated) {
+    LoadStatus loadStat = loadStatusMap.get(contextName);
     // ignore workspaceChanged events until after the load finishes.
     if (loadStat == null || !loadStat.complete) {
       return;
     }
     if (loadStat.error) {
-      YaBlocksEditor.setBlocksDamaged(formName);
-      ErrorReporter.reportError(MESSAGES.blocksNotSaved(formName));
+      YaBlocksEditor.setBlocksDamaged(contextName);
+      ErrorReporter.reportError(MESSAGES.blocksNotSaved(contextName));
     } else {
-      YaBlocksEditor.onBlocksAreaChanged(formName);
+      YaBlocksEditor.onBlocksAreaChanged(contextName, sendRelated);
     }
   }
 
-  // Returns true if the blocks for formName have been initialized (i.e.,
-  // no componentOps entry exists for formName).
-  public static boolean blocksInited(String formName) {
-    return !componentOps.containsKey(formName);
+  // Returns true if the blocks for contextName have been initialized (i.e.,
+  // no componentOps entry exists for contextName).
+  public static boolean blocksInited(String contextName) {
+    return !componentOps.containsKey(contextName);
   }
 
   public static String getBackpack() {
@@ -257,6 +259,22 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     }
   }
 
+  public static boolean isFormBlockly(String contextName) {
+    YaBlocksEditor yaBlocksEditor = YaBlocksEditor.getYaBlocksEditor(contextName);
+    if (yaBlocksEditor != null && yaBlocksEditor.isFormBlocksEditor()) {
+      return true;
+    }
+    return false;
+  }
+
+  public static boolean isTaskBlockly(String contextName) {
+    YaBlocksEditor yaBlocksEditor = YaBlocksEditor.getYaBlocksEditor(contextName);
+    if (yaBlocksEditor != null && yaBlocksEditor.isTaskBlocksEditor()) {
+      return true;
+    }
+    return false;
+  }
+
   /**
    * Add a component to the blocks workspace
    *
@@ -267,25 +285,25 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * @param uid             the unique id of the component instance
    */
   public void addComponent(String typeDescription, String instanceName, String uid) {
-    if (!blocksInited(formName)) {
+    if (!blocksInited(contextName)) {
       ComponentOp cop = new ComponentOp();
       cop.op = OpType.ADD;
       cop.instanceName = instanceName;
       cop.typeDescription = typeDescription;
       cop.uid = uid;
-      if (!componentOps.containsKey(formName)) {
-        componentOps.put(formName, new ArrayList<ComponentOp>());
+      if (!componentOps.containsKey(contextName)) {
+        componentOps.put(contextName, new ArrayList<ComponentOp>());
       }
-      componentOps.get(formName).add(cop);
+      componentOps.get(contextName).add(cop);
     } else {
-      doAddComponent(formName, typeDescription, instanceName, uid);
-      addSavedComponent(formName, typeDescription, instanceName, uid);
+      doAddComponent(contextName, typeDescription, instanceName, uid);
+      addSavedComponent(contextName, typeDescription, instanceName, uid);
     }
   }
 
-  private static void addSavedComponent(String formName, String typeDescription,
+  private static void addSavedComponent(String contextName, String typeDescription,
                                         String instanceName, String uid) {
-    Map<String, ComponentOp> myComponents = currentComponents.get(formName);
+    Map<String, ComponentOp> myComponents = currentComponents.get(contextName);
     if (!myComponents.containsKey(uid)) {
       // we expect there to be no saved component with this uid yet!
       ComponentOp savedComponent = new ComponentOp();
@@ -310,25 +328,25 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * @param uid          unique id
    */
   public void removeComponent(String typeName, String instanceName, String uid) {
-    if (!blocksInited(formName)) {
+    if (!blocksInited(contextName)) {
       ComponentOp cop = new ComponentOp();
       cop.op = OpType.REMOVE;
       cop.instanceName = instanceName;
       cop.typeName = typeName;
       cop.uid = uid;
-      if (!componentOps.containsKey(formName)) {
-        componentOps.put(formName, new ArrayList<ComponentOp>());
+      if (!componentOps.containsKey(contextName)) {
+        componentOps.put(contextName, new ArrayList<ComponentOp>());
       }
-      componentOps.get(formName).add(cop);
+      componentOps.get(contextName).add(cop);
     } else {
-      doRemoveComponent(formName, typeName, instanceName, uid);
-      removeSavedComponent(formName, typeName, instanceName, uid);
+      doRemoveComponent(contextName, typeName, instanceName, uid);
+      removeSavedComponent(contextName, typeName, instanceName, uid);
     }
   }
 
-  private static void removeSavedComponent(String formName, String typeName,
+  private static void removeSavedComponent(String contextName, String typeName,
     String instanceName, String uid) {
-    Map<String, ComponentOp> myComponents = currentComponents.get(formName);
+    Map<String, ComponentOp> myComponents = currentComponents.get(contextName);
     if (myComponents.containsKey(uid)
         && myComponents.get(uid).instanceName.equals(instanceName)) {
       // we expect it to be there
@@ -350,26 +368,26 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    */
   public void renameComponent(String typeName, String oldName,
     String newName, String uid) {
-    if (!blocksInited(formName)) {
+    if (!blocksInited(contextName)) {
       ComponentOp cop = new ComponentOp();
       cop.op = OpType.RENAME;
       cop.instanceName = newName;
       cop.oldName = oldName;
       cop.typeName = typeName;
       cop.uid = uid;
-      if (!componentOps.containsKey(formName)) {
-        componentOps.put(formName, new ArrayList<ComponentOp>());
+      if (!componentOps.containsKey(contextName)) {
+        componentOps.put(contextName, new ArrayList<ComponentOp>());
       }
-      componentOps.get(formName).add(cop);
+      componentOps.get(contextName).add(cop);
     } else {
-      doRenameComponent(formName, typeName, oldName, newName, uid);
-      renameSavedComponent(formName, typeName, oldName, newName, uid);
+      doRenameComponent(contextName, typeName, oldName, newName, uid);
+      renameSavedComponent(contextName, typeName, oldName, newName, uid);
     }
   }
 
-  private static void renameSavedComponent(String formName, String typeName,
+  private static void renameSavedComponent(String contextName, String typeName,
     String oldName, String newName, String uid) {
-    Map<String, ComponentOp> myComponents = currentComponents.get(formName);
+    Map<String, ComponentOp> myComponents = currentComponents.get(contextName);
     if (myComponents.containsKey(uid)) {
       // we expect it to be there
       ComponentOp savedComponent = myComponents.get(uid);
@@ -391,8 +409,8 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * @param name
    */
   public void showComponentBlocks(String name) {
-    if (blocksInited(formName)) {
-      doShowComponentBlocks(formName, name);
+    if (blocksInited(contextName)) {
+      doShowComponentBlocks(contextName, name);
     }
   }
 
@@ -400,8 +418,8 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * Hide the component blocks drawer
    */
   public void hideComponentBlocks() {
-    if (blocksInited(formName)) {
-      doHideComponentBlocks(formName);
+    if (blocksInited(contextName)) {
+      doHideComponentBlocks(contextName);
     }
   }
 
@@ -412,8 +430,8 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    */
   public void showBuiltinBlocks(String drawerName) {
     try {
-      if (blocksInited(formName)) {
-        doShowBuiltinBlocks(formName, drawerName);
+      if (blocksInited(contextName)) {
+        doShowBuiltinBlocks(contextName, drawerName);
       }
     } catch (JavaScriptException e) {
       ErrorReporter.reportInfo("Not yet implemented: " + drawerName);
@@ -424,8 +442,8 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * Hide the built-in blocks drawer
    */
   public void hideBuiltinBlocks() {
-    if (blocksInited(formName)) {
-      doHideBlocks(formName);
+    if (blocksInited(contextName)) {
+      doHideBlocks(contextName);
     }
   }
 
@@ -435,8 +453,8 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * @param drawerName
    */
   public void showGenericBlocks(String drawerName) {
-    if (blocksInited(formName)) {
-      doShowGenericBlocks(formName, drawerName);
+    if (blocksInited(contextName)) {
+      doShowGenericBlocks(contextName, drawerName);
     }
   }
 
@@ -444,20 +462,20 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * Hide the generic blocks drawer
    */
   public void hideGenericBlocks() {
-    if (blocksInited(formName)) {
-      doHideBlocks(formName);
+    if (blocksInited(contextName)) {
+      doHideBlocks(contextName);
     }
   }
 
   public void renderBlockly() {
-    if (blocksInited(formName)) {
-      doRenderBlockly(formName);
+    if (blocksInited(contextName)) {
+      doRenderBlockly(contextName);
     }
   }
 
-  public static void toggleWarning(String formName) {
-    if (blocksInited(formName)) {
-      doToggleWarning(formName);
+  public static void toggleWarning(String contextName) {
+    if (blocksInited(contextName)) {
+      doToggleWarning(contextName);
     }
   }
 
@@ -469,11 +487,11 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     }
   }
 
-  public static void checkWarningState(String formName) {
+  public static void checkWarningState(String contextName) {
     if (BlocklyPanel.isWarningVisible) {
-      toggleWarning(formName);
+      toggleWarning(contextName);
     }
-    doCheckWarnings(formName);
+    doCheckWarnings(contextName);
   }
 
   public static void callToggleWarning() {
@@ -481,7 +499,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   }
 
   /**
-   * Remember any component instances for this form in case
+   * Remember any component instances for this context in case
    * the workspace gets reinitialized later (we get detached from
    * our parent object and then our blocks editor gets loaded
    * again later). Also, remember the current state of the blocks
@@ -491,25 +509,25 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     // Actually, we already have the components saved, but take this as an
     // indication that we are going to reinit the blocks editor the next
     // time it is shown.
-    OdeLog.log("BlocklyEditor: prepared for reinit for form " + formName);
+    OdeLog.log("BlocklyEditor: prepared for reinit for context " + contextName);
     // Call doResetYail which will stop the timer that is polling the phone. It is important
-    // that it be stopped to avoid a race condition where the last timer on this form fires
-    // while the new form is loading.
-    doResetYail(formName);
+    // that it be stopped to avoid a race condition where the last timer on this context fires
+    // while the new context is loading.
+    doResetYail(contextName);
     // Get blocks content before putting anything in the componentOps map since an entry in
     // the componentOps map is taken as an indication that the blocks area has not initialized yet.
-    pendingBlocksContentMap.put(formName, getBlocksContent());
-    // [lyn, 2014/10/28] added formJson for upgrading
-    pendingFormJsonMap.put(formName, getFormJson());
-    componentOps.put(formName, new ArrayList<ComponentOp>());
+    pendingBlocksContentMap.put(contextName, getBlocksContent());
+    // [lyn, 2014/10/28] added contextJson for upgrading
+    pendingContextJsonMap.put(contextName, getContextJson());
+    componentOps.put(contextName, new ArrayList<ComponentOp>());
   }
 
   /**
    * @returns true if the blocks drawer is showing, false otherwise.
    */
   public boolean drawerShowing() {
-    if (blocksInited(formName)) {
-      return doDrawerShowing(formName);
+    if (blocksInited(contextName)) {
+      return doDrawerShowing(contextName);
     } else {
       return false;
     }
@@ -520,30 +538,30 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    *
    * @param blocksContent XML description of a blocks workspace in format expected by Blockly
    */
-  // [lyn, 2014/10/27] added formJson for upgrading
-  public void loadBlocksContent(String formJson, String blocksContent) {
+  // [lyn, 2014/10/27] added contextJson for upgrading
+  public void loadBlocksContent(String contextJson, String blocksContent) {
     LoadStatus loadStat = new LoadStatus();
-    loadStatusMap.put(formName, loadStat);
-    if (blocksInited(formName)) {
-      OdeLog.log("Loading blocks content for " + formName);
-      loadBlocksContentNow(formName, formJson, blocksContent);
+    loadStatusMap.put(contextName, loadStat);
+    if (blocksInited(contextName)) {
+      OdeLog.log("Loading blocks content for " + contextName);
+      loadBlocksContentNow(contextName, contextJson, blocksContent);
     } else {
       // save it to load when the blocks area is initialized
-      OdeLog.log("Caching blocks content for " + formName + " for loading when blocks area inited");
-      pendingBlocksContentMap.put(formName, blocksContent);
-      // [lyn, 2014/10/27] added formJson for upgrading
-      pendingFormJsonMap.put(formName, formJson);
+      OdeLog.log("Caching blocks content for " + contextName + " for loading when blocks area inited");
+      pendingBlocksContentMap.put(contextName, blocksContent);
+      // [lyn, 2014/10/27] added contextJson for upgrading
+      pendingContextJsonMap.put(contextName, contextJson);
     }
   }
 
-  // [lyn, 2014/10/27] added formJson for upgrading
-  public static void loadBlocksContentNow(String formName, String formJson, String blocksContent) {
-    LoadStatus loadStat = loadStatusMap.get(formName);  // should not be null!
+  // [lyn, 2014/10/27] added contextJson for upgrading
+  public static void loadBlocksContentNow(String contextName, String contextJson, String blocksContent) {
+    LoadStatus loadStat = loadStatusMap.get(contextName);  // should not be null!
     try {
-      doLoadBlocksContent(formName, formJson, blocksContent);
+      doLoadBlocksContent(contextName, contextJson, blocksContent);
     } catch (JavaScriptException e) {
-      ErrorReporter.reportError(MESSAGES.blocksLoadFailure(formName));
-      OdeLog.elog("Error loading blocks for screen " + formName + ": "
+      ErrorReporter.reportError(MESSAGES.blocksLoadFailure(contextName));
+      OdeLog.elog("Error loading blocks for screen " + contextName + ": "
           + e.getDescription());
       loadStat.error = true;
     }
@@ -554,26 +572,26 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * Return the XML string describing the current state of the blocks workspace
    */
   public String getBlocksContent() {
-    if (blocksInited(formName)) {
-      return doGetBlocksContent(formName);
+    if (blocksInited(contextName)) {
+      return doGetBlocksContent(contextName);
     } else {
       // in case someone clicks Save before the blocks area is inited
-      String blocksContent = pendingBlocksContentMap.get(formName);
+      String blocksContent = pendingBlocksContentMap.get(contextName);
       return (blocksContent != null) ? blocksContent : "";
     }
   }
 
   /**
-   * Return the JSON string describing the current state of the associated form
+   * Return the JSON string describing the current state of the associated context
    */
   // [lyn, 2014/10/28] Handle these cases
-  public String getFormJson() {
-    if (blocksInited(formName)) {
-      return myBlocksEditor.encodeFormAsJsonString(true);
+  public String getContextJson() {
+    if (blocksInited(contextName)) {
+      return myBlocksEditor.encodeContextAsJsonString(true);
     } else {
       // in case someone clicks Save before the blocks area is inited
-      String formJson = pendingFormJsonMap.get(formName);
-      return (formJson != null) ? formJson : "";
+      String contextJson = pendingContextJsonMap.get(contextName);
+      return (contextJson != null) ? contextJson : "";
     }
   }
 
@@ -585,57 +603,69 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * @return the yail code as a String
    * @throws YailGenerationException if there was a problem generating the Yail
    */
-  public String getYail(String formJson, String packageName) throws YailGenerationException {
-    if (!blocksInited(formName)) {
-      throw new YailGenerationException("Blocks area is not initialized yet", formName);
+  public String getYail(String contextJson, String packageName) throws YailGenerationException {
+    if (!blocksInited(contextName)) {
+      throw new YailGenerationException("Blocks area is not initialized yet", contextName);
     }
     try {
-      return doGetYail(formName, formJson, packageName);
+      if (myBlocksEditor.isFormBlocksEditor()) {
+        return doGetFormYail(contextName, contextJson, packageName);
+      } else if (myBlocksEditor.isTaskBlocksEditor()) {
+        return doGetTaskYail(contextName, contextJson, packageName);
+      } else {
+        throw new YailGenerationException("BlocklyPanel for unknown context", contextName);
+      }
     } catch (JavaScriptException e) {
-      throw new YailGenerationException(e.getDescription(), formName);
+      throw new YailGenerationException(e.getDescription(), contextName);
     }
   }
 
   /**
-   * Send component data (json and form name) to Blockly for building
+   * Send component data (json and context name) to Blockly for building
    * yail for the REPL.
    *
    * @throws YailGenerationException if there was a problem generating the Yail
    */
-  public void sendComponentData(String formJson, String packageName) throws YailGenerationException {
-    if (!currentForm.equals(formName)) { // Not working on the current form...
-      OdeLog.log("Not working on " + currentForm + " (while sending for " + formName + ")");
+  public void sendComponentData(String contextJson, String packageName) throws YailGenerationException {
+    if (myBlocksEditor.isFormBlocksEditor() && !currentContext.equals(contextName)) { // Not working on the current form...
+      OdeLog.log("Not working on " + currentContext + " (while sending for " + contextName + ")");
       return;
     }
-    if (!blocksInited(formName)) {
-      throw new YailGenerationException("Blocks area is not initialized yet", formName);
+    if (!blocksInited(contextName)) {
+      throw new YailGenerationException("Blocks area is not initialized yet", contextName);
     }
     try {
-      doSendJson(formName, formJson, packageName);
+      if (myBlocksEditor.isFormBlocksEditor()) {
+        doSendFormJson(contextName, contextJson, packageName);
+      } else if (myBlocksEditor.isTaskBlocksEditor()) {
+        doSendTaskJson(contextName, contextJson, packageName);
+      }
+
     } catch (JavaScriptException e) {
-      throw new YailGenerationException(e.getDescription(), formName);
+      throw new YailGenerationException(e.getDescription(), contextName);
     }
   }
 
-  public void showDifferentForm(String newFormName) {
-    OdeLog.log("showDifferentForm changing from " + formName + " to " + newFormName);
-    // Nuke Yail for form we are leaving so it will reload when we return
-    if (!formName.equals(newFormName))
-      doResetYail(formName);
-    formName = newFormName;
-    blocklyWorkspaceChanged(formName);
+  // TODO(jusrkg): Check if Nuking YAIL is necessary
+  public void showDifferentContext(String newContextName) {
+    OdeLog.log("showDifferentContext changing from " + contextName + " to " + newContextName);
+    // Nuke Yail for context we are leaving so it will reload when we return
+//    if (!contextName.equals(newContextName))
+//      doResetYail(contextName);
+    contextName = newContextName;
+    blocklyWorkspaceChanged(contextName, true);
   }
 
   public void startRepl(boolean alreadyRunning, boolean forEmulator, boolean forUsb) { // Start the Repl
-    doStartRepl(formName, alreadyRunning, forEmulator, forUsb);
+    doStartRepl(contextName, alreadyRunning, forEmulator, forUsb);
   }
 
   public void hardReset() {
-    doHardReset(formName);
+    doHardReset(contextName);
   }
 
   public void verifyAllBlocks() {
-    doVerifyAllBlocks(formName);
+    doVerifyAllBlocks(contextName);
   }
 
   public static boolean checkIsAdmin() {
@@ -645,10 +675,18 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   // Set currentScreen
   // We use this to determine if we should send Yail to a
   // a connected device.
-  public static void setCurrentForm(String formName) {
-    currentForm = formName;
-    if (blocksInited(formName))
-      blocklyWorkspaceChanged(formName); // Update the device now if the blocks are ready.
+  public static void setCurrentContext(String contextName) {
+    currentContext = contextName;
+    if (blocksInited(contextName))
+      blocklyWorkspaceChanged(contextName, true); // Update the device now if the blocks are ready.
+  }
+
+  public static void setProjectLastForm(long projectId, String formName) {
+    BlocklyPanel.lastFormMap.put(Long.toString(projectId), formName);
+  }
+
+  public static String getProjectLastForm(long projectId) {
+      return BlocklyPanel.lastFormMap.get(Long.toString(projectId));
   }
 
   public static void indicateDisconnect() {
@@ -665,7 +703,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   }
 
   public void getBlocksImage(Callback callback) {
-    doFetchBlocksImage(formName, callback);
+    doFetchBlocksImage(contextName, callback);
   }
 
   // The code below (4 methods worth) is for creating a GWT dialog box
@@ -768,10 +806,10 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   }
 
   public static String getQRCode(String inString) {
-    if (currentForm == null) {  // Cannot build a QR code without a current form
+    if (currentContext == null) {  // Cannot build a QR code without a current context
       return "";                // This only happens when you have no projects
     }
-    return doQRCode(currentForm, inString);
+    return doQRCode(currentContext, inString);
   }
 
   /**
@@ -782,7 +820,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    */
   public void switchLanguage(String newLanguage) {
     languageSetting = newLanguage;
-    doSwitchLanguage(formName, languageSetting);
+    doSwitchLanguage(contextName, languageSetting);
   }
 
   /**
@@ -790,11 +828,11 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    * desired language.
    *
    * @param newLanguage The desired new language setting
-   * @param formName
+   * @param contextName
    */
-  public static void switchLanguage(String formName, String newLanguage) {
+  public static void switchLanguage(String contextName, String newLanguage) {
     languageSetting = newLanguage;
-    doSwitchLanguage(formName, languageSetting);
+    doSwitchLanguage(contextName, languageSetting);
   }
 
   /**
@@ -806,11 +844,11 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
    */
 
   public void updateCompanion() {
-    updateCompanion(formName);
+    updateCompanion(contextName);
   }
 
-  public static void updateCompanion(String formName) {
-    doUpdateCompanion(formName);
+  public static void updateCompanion(String contextName) {
+    doUpdateCompanion(contextName);
   }
 
   public static String getLocalizedPropertyName(String key) {
@@ -835,7 +873,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
 
   @Override
   public void onComponentTypeAdded(List<String> componentTypes) {
-    populateComponentTypes(formName);
+    populateComponentTypes(contextName);
     verifyAllBlocks();
 
   }
@@ -847,12 +885,12 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
 
   @Override
   public void onComponentTypeRemoved(Map<String, String> componentTypes) {
-    populateComponentTypes(formName);
+    populateComponentTypes(contextName);
   }
 
   @Override
   public void onResetDatabase() {
-    populateComponentTypes(formName);
+    populateComponentTypes(contextName);
   }
   // ------------ Native methods ------------
 
@@ -870,7 +908,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     $wnd.BlocklyPanel_initBlocksArea =
         $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::initBlocksArea(Ljava/lang/String;));
     $wnd.BlocklyPanel_blocklyWorkspaceChanged =
-        $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::blocklyWorkspaceChanged(Ljava/lang/String;));
+        $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::blocklyWorkspaceChanged(Ljava/lang/String;Z));
     $wnd.BlocklyPanel_switchLanguage =
         $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::switchLanguage(Ljava/lang/String;Ljava/lang/String;));
     $wnd.BlocklyPanel_checkWarningState =
@@ -916,6 +954,10 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
       $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::getBackpack());
     $wnd.BlocklyPanel_setBackpack =
       $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::setBackpack(Ljava/lang/String;Z));
+    $wnd.BlocklyPanel_isFormBlockly =
+      $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::isFormBlockly(Ljava/lang/String;));
+    $wnd.BlocklyPanel_isTaskBlockly =
+      $entry(@com.google.appinventor.client.editor.youngandroid.BlocklyPanel::isTaskBlockly(Ljava/lang/String;));
   }-*/;
 
   private native void initJS() /*-{
@@ -924,102 +966,110 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
                           // the iframe finishes loading
   }-*/;
 
-  private static native void doAddComponent(String formName, String typeDescription,
+  private static native void doAddComponent(String contextName, String typeDescription,
                                             String instanceName, String uid) /*-{
-    $wnd.Blocklies[formName].Component.add(instanceName, uid);
+    $wnd.Blocklies[contextName].Component.add(instanceName, uid);
   }-*/;
 
-  private static native void doRemoveComponent(String formName, String typeName,
+  private static native void doRemoveComponent(String contextName, String typeName,
                                                String instanceName, String uid) /*-{
-    $wnd.Blocklies[formName].Component.remove(typeName, instanceName, uid);
+    $wnd.Blocklies[contextName].Component.remove(typeName, instanceName, uid);
   }-*/;
 
-  private static native void doRenameComponent(String formName, String typeName, String oldName,
+  private static native void doRenameComponent(String contextName, String typeName, String oldName,
                                                String newName, String uid) /*-{
-    $wnd.Blocklies[formName].Component.rename(oldName, newName, uid)
+    $wnd.Blocklies[contextName].Component.rename(oldName, newName, uid)
   }-*/;
 
-  private static native void doShowComponentBlocks(String formName, String name) /*-{
-    $wnd.Blocklies[formName].Drawer.showComponent(name);
+  private static native void doShowComponentBlocks(String contextName, String name) /*-{
+    $wnd.Blocklies[contextName].Drawer.showComponent(name);
   }-*/;
 
-  public static native void doHideComponentBlocks(String formName) /*-{
-    $wnd.Blocklies[formName].Drawer.hide();
+  public static native void doHideComponentBlocks(String contextName) /*-{
+    $wnd.Blocklies[contextName].Drawer.hide();
   }-*/;
 
-  private static native void doShowBuiltinBlocks(String formName, String drawerName) /*-{
-    var myBlockly = $wnd.Blocklies[formName];
+  private static native void doShowBuiltinBlocks(String contextName, String drawerName) /*-{
+    var myBlockly = $wnd.Blocklies[contextName];
     myBlockly.Drawer.hide();
     myBlockly.Drawer.showBuiltin(drawerName);
   }-*/;
 
-  public static native void doHideBlocks(String formName) /*-{
-    $wnd.Blocklies[formName].Drawer.hide();
+  public static native void doHideBlocks(String contextName) /*-{
+    $wnd.Blocklies[contextName].Drawer.hide();
   }-*/;
 
-  private static native void doShowGenericBlocks(String formName, String drawerName) /*-{
-    var myBlockly = $wnd.Blocklies[formName];
+  private static native void doShowGenericBlocks(String contextName, String drawerName) /*-{
+    var myBlockly = $wnd.Blocklies[contextName];
     myBlockly.Drawer.hide();
     myBlockly.Drawer.showGeneric(drawerName);
   }-*/;
 
-  public static native boolean doDrawerShowing(String formName) /*-{
-    return $wnd.Blocklies[formName].Drawer.isShowing();
+  public static native boolean doDrawerShowing(String contextName) /*-{
+    return $wnd.Blocklies[contextName].Drawer.isShowing();
   }-*/;
 
-  // [lyn, 2014/10/27] added formJson for upgrading
-  public static native void doLoadBlocksContent(String formName, String formJson, String blocksContent) /*-{
-    $wnd.Blocklies[formName].SaveFile.load(formJson, blocksContent);
-    $wnd.Blocklies[formName].Component.verifyAllBlocks();
+  // [lyn, 2014/10/27] added contextJson for upgrading
+  public static native void doLoadBlocksContent(String contextName, String contextJson, String blocksContent) /*-{
+    $wnd.Blocklies[contextName].SaveFile.load(contextJson, blocksContent);
+    $wnd.Blocklies[contextName].Component.verifyAllBlocks();
   }-*/;
 
-  public static native String doGetBlocksContent(String formName) /*-{
-    return $wnd.Blocklies[formName].SaveFile.get();
+  public static native String doGetBlocksContent(String contextName) /*-{
+    return $wnd.Blocklies[contextName].SaveFile.get();
   }-*/;
 
-  public static native String doGetYailRepl(String formName, String formJson, String packageName) /*-{
-    return $wnd.Blocklies[formName].Yail.getFormYail(formJson, packageName, true);
+  public static native String doGetYailRepl(String contextName, String contextJson, String packageName) /*-{
+    return $wnd.Blocklies[contextName].Yail.getFormYail(contextJson, packageName, true);
   }-*/;
 
-  public static native String doGetYail(String formName, String formJson, String packageName) /*-{
+  public static native String doGetFormYail(String formName, String formJson, String packageName) /*-{
     return $wnd.Blocklies[formName].Yail.getFormYail(formJson, packageName);
   }-*/;
 
-  public static native void doSendJson(String formName, String formJson, String packageName) /*-{
-    $wnd.Blocklies[formName].ReplMgr.sendFormData(formJson, packageName);
+  public static native String doGetTaskYail(String taskName, String taskJson, String packageName) /*-{
+    return $wnd.Blocklies[taskName].Yail.getTaskYail(taskJson, packageName);
   }-*/;
 
-  public static native void doResetYail(String formName) /*-{
-    $wnd.Blocklies[formName].ReplMgr.resetYail();
+  public static native void doSendFormJson(String formName, String formJson, String packageName) /*-{
+    $wnd.Blocklies[formName].ReplMgr.sendFormData(formName, formJson, packageName);
   }-*/;
 
-  public static native void doPollYail(String formName) /*-{
+  public static native void doSendTaskJson(String taskName, String taskJson, String packageName) /*-{
+    $wnd.Blocklies[taskName].ReplMgr.sendTaskData(taskName, taskJson, packageName);
+  }-*/;
+
+  public static native void doResetYail(String contextName) /*-{
+    $wnd.Blocklies[contextName].ReplMgr.resetYail();
+  }-*/;
+
+  public static native void doPollYail(String contextName) /*-{
     try {
-      $wnd.Blocklies[formName].ReplMgr.pollYail();
+      $wnd.Blocklies[contextName].ReplMgr.pollYail();
     } catch (e) {
       $wnd.console.log("doPollYail() Failed");
       $wnd.console.log(e);
     }
   }-*/;
 
-  public static native void doStartRepl(String formName, boolean alreadyRunning, boolean forEmulator, boolean forUsb) /*-{
-    $wnd.Blocklies[formName].ReplMgr.startRepl(alreadyRunning, forEmulator, forUsb);
+  public static native void doStartRepl(String contextName, boolean alreadyRunning, boolean forEmulator, boolean forUsb) /*-{
+    $wnd.Blocklies[contextName].ReplMgr.startRepl(alreadyRunning, forEmulator, forUsb);
   }-*/;
 
-  public static native void doHardReset(String formName) /*-{
-    $wnd.Blocklies[formName].ReplMgr.ehardreset(formName);
+  public static native void doHardReset(String contextName) /*-{
+    $wnd.Blocklies[contextName].ReplMgr.ehardreset(contextName);
   }-*/;
 
-  public static native void doRenderBlockly(String formName) /*-{
-    $wnd.Blocklies[formName].BlocklyEditor.render();
+  public static native void doRenderBlockly(String contextName) /*-{
+    $wnd.Blocklies[contextName].BlocklyEditor.render();
   }-*/;
 
-  public static native void doToggleWarning(String formName) /*-{
-    $wnd.Blocklies[formName].WarningHandler.warningToggle();
+  public static native void doToggleWarning(String contextName) /*-{
+    $wnd.Blocklies[contextName].WarningHandler.warningToggle();
   }-*/;
 
-  public static native void doCheckWarnings(String formName) /*-{
-    $wnd.Blocklies[formName].WarningHandler.checkAllBlocksForWarningsAndErrors();
+  public static native void doCheckWarnings(String contextName) /*-{
+    $wnd.Blocklies[contextName].WarningHandler.checkAllBlocksForWarningsAndErrors();
   }-*/;
 
   public static native String getCompVersion() /*-{
@@ -1043,20 +1093,20 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
     $wnd.ACCEPTABLE_COMPANIONS.push(comp);
   }-*/;
 
-  static native String doQRCode(String formName, String inString) /*-{
-    return $wnd.Blocklies[formName].ReplMgr.makeqrcode(inString);
+  static native String doQRCode(String contextName, String inString) /*-{
+    return $wnd.Blocklies[contextName].ReplMgr.makeqrcode(inString);
   }-*/;
 
   /*
    * Switch the Blockly's language setting to "language" as specified in the
    * parameter argument.
    */
-  public static native void doSwitchLanguage(String formName, String language) /*-{
-    $wnd.Blocklies[formName].language_switch.switchLanguage(language);
+  public static native void doSwitchLanguage(String contextName, String language) /*-{
+    $wnd.Blocklies[contextName].language_switch.switchLanguage(language);
   }-*/;
 
-  public static native void doUpdateCompanion(String formName) /*-{
-    $wnd.Blocklies[formName].ReplMgr.triggerUpdate();
+  public static native void doUpdateCompanion(String contextName) /*-{
+    $wnd.Blocklies[contextName].ReplMgr.triggerUpdate();
   }-*/;
 
   public static native String getURL() /*-{
@@ -1066,18 +1116,18 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
   /*
    * Update Component Types in Blockly ComponentTypes
    */
-  public static native void populateComponentTypes(String formName) /*-{
-      $wnd.Blocklies[formName].ComponentTypes.populateTypes(top.location.hash.substr(1));
+  public static native void populateComponentTypes(String contextName) /*-{
+      $wnd.Blocklies[contextName].ComponentTypes.populateTypes(top.location.hash.substr(1));
   }-*/;
 
   /*
    * Update Component Types in Blockly ComponentTypes
    */
-  public static native void doVerifyAllBlocks(String formName) /*-{
-      $wnd.Blocklies[formName].Component.verifyAllBlocks();
+  public static native void doVerifyAllBlocks(String contextName) /*-{
+      $wnd.Blocklies[contextName].Component.verifyAllBlocks();
   }-*/;
 
-  public static native void doFetchBlocksImage(String formName, Callback<String,String> callback) /*-{
+  public static native void doFetchBlocksImage(String contextName, Callback<String,String> callback) /*-{
       var callb = $entry(function(result, error) {
           if (error) {
              callback.@com.google.gwt.core.client.Callback::onFailure(Ljava/lang/Object;)(error);
@@ -1085,7 +1135,7 @@ public class BlocklyPanel extends HTMLPanel implements ComponentDatabaseChangeLi
              callback.@com.google.gwt.core.client.Callback::onSuccess(Ljava/lang/Object;)(result);
           }
       });
-      $wnd.Blocklies[formName].ExportBlocksImage.getUri(callb);
+      $wnd.Blocklies[contextName].ExportBlocksImage.getUri(callb);
   }-*/;
 
 }

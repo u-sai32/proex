@@ -55,24 +55,26 @@
         // We expect window.location.hash to have the form:
         // projectId_formName, and to be unique among
         // all the Blockly instances created in this App Inventor session.
-        var formName = window.location.hash.substr(1);
+        var fullContextName = window.location.hash.substr(1);
         if (!window.parent.Blocklies) {
           // We keep a set of Blockly objects indexed by name
           // of the form for which they are the blocks editor
           window.parent.Blocklies = {};
         }
-        window.parent.Blocklies[formName] = Blockly;
-        Blockly.ReplMgr.formName = formName; <!-- So we can tell the AssetManager which form we are on. -->
+        window.parent.Blocklies[fullContextName] = Blockly;
+        Blockly.ReplMgr.fullContextName = fullContextName; <!-- So we can tell the AssetManager which form we are on. -->
+        Blockly.ReplMgr.contextName = fullContextName.substr(fullContextName.indexOf("_") + 1);
+        Blockly.Yail.contextName = Blockly.ReplMgr.contextName;
         if (window.parent.ReplState === undefined) {
           window.parent.ReplState = new Blockly.ReplStateObj(); // There should be one of these for the whole system
         }
         window.parent.ReplState.phoneState = {}; <!-- Reset the phone state when we are reloaded -->
-        Blockly.BlocklyEditor.startup(document.body, formName);
+        Blockly.BlocklyEditor.startup(document.body, fullContextName);
         // Tell populateTypes the projectId, which is in the top
         // window's hash
         Blockly.ComponentTypes.populateTypes(top.location.hash.substr(1));
-        window.parent.BlocklyPanel_initBlocksArea(formName);
-        window.parent.BlocklyPanel_checkWarningState(formName);
+        window.parent.BlocklyPanel_initBlocksArea(fullContextName);
+        window.parent.BlocklyPanel_checkWarningState(fullContextName);
       }
     </script>
   </head>

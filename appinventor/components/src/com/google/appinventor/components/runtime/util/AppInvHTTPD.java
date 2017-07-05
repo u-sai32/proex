@@ -7,9 +7,8 @@
 
 package com.google.appinventor.components.runtime.util;
 import com.google.appinventor.components.runtime.ReplForm;
-import java.util.Enumeration;
-import java.util.Formatter;
-import java.util.Properties;
+
+import java.util.*;
 import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
@@ -20,6 +19,10 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.URL;
 import java.net.URLConnection;
+
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
 
 import javax.crypto.Mac;
 import javax.crypto.spec.SecretKeySpec;
@@ -121,17 +124,15 @@ public class AppInvHTTPD extends NanoHTTPD {
     if (uri.equals("/_newblocks")) { // Handle AJAX calls from the newblocks code
       String inSeq = parms.getProperty("seq", "0");
       int iseq = Integer.parseInt(inSeq);
-      String blockid = parms.getProperty("blockid");
-      String code = parms.getProperty("code");
+      String repl_input = parms.getProperty("repl_input");
       String inMac = parms.getProperty("mac", "no key provided");
       String compMac = "";
-      String input_code = code;
       if (hmacKey != null) {
         try {
           Mac hmacSha1 = Mac.getInstance("HmacSHA1");
           SecretKeySpec key = new SecretKeySpec(hmacKey, "RAW");
           hmacSha1.init(key);
-          byte [] tmpMac = hmacSha1.doFinal((code + inSeq + blockid).getBytes());
+          byte [] tmpMac = hmacSha1.doFinal((repl_input + inSeq ).getBytes());
           StringBuffer sb = new StringBuffer(tmpMac.length * 2);
           Formatter formatter = new Formatter(sb);
           for (byte b : tmpMac)
@@ -148,7 +149,6 @@ public class AppInvHTTPD extends NanoHTTPD {
         Log.d(LOG_TAG, "Computed Mac = " + compMac);
         Log.d(LOG_TAG, "Incoming seq = " + inSeq);
         Log.d(LOG_TAG, "Computed seq = " + seq);
-        Log.d(LOG_TAG, "blockid = " + blockid);
         if (!inMac.equals(compMac)) {
           Log.e(LOG_TAG, "Hmac does not match");
           form.dispatchErrorOccurredEvent(form, "AppInvHTTPD",
@@ -175,25 +175,45 @@ public class AppInvHTTPD extends NanoHTTPD {
         Response res = new Response(HTTP_OK, MIME_JSON, "{\"status\" : \"BAD\", \"message\" : \"Security Error: No HMAC Key\"}");
         return(res);
       }
+      String contextName = "";
+      String contextType = "Form";
+      String contextCode = "#f";
+      String contextBlockId = "-2";
+      try {
+        JSONObject replInput = new JSONObject(repl_input);
+        contextName = replInput.getString("name");
+        contextType = replInput.getString("type");
+        contextCode = replInput.getString("code");
+        contextBlockId = replInput.getString("blockid");
+      } catch (JSONException e) {
+        e.printStackTrace();
+      }
+      String input_code = contextCode;
+      if (contextType.equals("Form")) {
+        contextCode = "(begin (require <com.google.youngandroid.runtime>) (process-repl-form-input " + contextBlockId +
+                " (begin " +  contextCode + " )))";
+      } else if (contextType.equals("Task")) {
+        contextCode =  "(begin (require <com.google.youngandroid.runtime>) (process-repl-task-input \"" + contextName + "\" " + contextBlockId +
+                " (begin " + contextCode + " )))";
+      }
 
-      code = "(begin (require <com.google.youngandroid.runtime>) (process-repl-input " + blockid + " (begin " +
-        code + " )))";
-
-      Log.d(LOG_TAG, "To Eval: " + code);
+      Log.d(LOG_TAG, "To Eval: " + contextName + " [" + contextType + "] => " + contextCode);
 
       Response res;
       form.loadComponents();  // load all components before Eval
       try {
+
         // Don't evaluate a simple "#f" which is used by the poller
         if (input_code.equals("#f")) {
           Log.e(LOG_TAG, "Skipping evaluation of #f");
         } else {
-          scheme.eval(code);
+          scheme.eval(contextCode);
         }
+
         res = new Response(HTTP_OK, MIME_JSON, RetValManager.fetch(false));
       } catch (Throwable ex) {
         Log.e(LOG_TAG, "newblocks: Scheme Failure", ex);
-        RetValManager.appendReturnValue(blockid, "BAD", ex.toString());
+        RetValManager.appendReturnValue(contextBlockId, "BAD", ex.toString());
         res = new Response(HTTP_OK, MIME_JSON, RetValManager.fetch(false));
       }
       res.addHeader("Access-Control-Allow-Origin", "*");

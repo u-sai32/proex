@@ -126,7 +126,7 @@ public final class NewYoungAndroidProjectWizard extends NewProjectWizard {
                 Scheduler.get().scheduleDeferred(new Scheduler.ScheduledCommand() {
                     @Override
                     public void execute() {
-                      if (Ode.getInstance().screensLocked()) { // Wait until I/O finished
+                      if (Ode.getInstance().contextsLocked()) { // Wait until I/O finished
                         Scheduler.get().scheduleDeferred(this); // on other project
                       } else {
                         Ode.getInstance().openYoungAndroidProjectInDesigner(project);

@@ -1,22 +1,21 @@
 // -*- mode: java; c-basic-offset: 2; -*-
-// Copyright 2009-2011 Google, All Rights reserved
-// Copyright 2011-2012 MIT, All rights reserved
+// Copyright 2017 MIT, All rights reserved
 // Released under the Apache License, Version 2.0
 // http://www.apache.org/licenses/LICENSE-2.0
 
 package com.google.appinventor.client.editor.simple.components;
 
 /**
- * Listener interface for receiving form change events.
+ * Listener interface for receiving context change events.
  *
- * <p>Classes interested in processing form change events implement this
- * interface, and instances of that class are registered with a form, using
- * the form's {@link MockForm#addFormChangeListener(FormChangeListener)}
+ * <p>Classes interested in processing context change events implement this
+ * interface, and instances of that class are registered with a context, using
+ * the context's {@link MockContext#addContextChangeListener(ContextChangeListener)}
  * method.
  *
  * @author lizlooney@google.com (Liz Looney)
  */
-public interface FormChangeListener {
+public interface ContextChangeListener {
 
   /**
    * Invoked when a component property is changed.
@@ -54,7 +53,7 @@ public interface FormChangeListener {
   void onComponentRenamed(MockComponent component, String oldName);
 
   /**
-   * Invoked when a selection change of the form or of one of its components
+   * Invoked when a selection change of the context or of one of its components
    * occurs.
    *
    * @param component  the component that was selected or unselected
