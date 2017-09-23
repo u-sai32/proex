@@ -23,13 +23,30 @@ public abstract class AndroidNonvisibleComponent implements Component {
   protected final Form form;
   protected final Task task;
 
-  protected final boolean isTaskCompatible;
   protected final boolean isScreenCompatible;
+  protected final boolean isTaskCompatible;
+
+
+  /**
+   * Legacy constructor for older extensions
+   *
+   * @param form that this component will be placed in
+   */
+  protected AndroidNonvisibleComponent(Form form) {
+    this.container = form;
+    this.context = form.$context();
+    this.form = form;
+    this.task = null;
+
+    isScreenCompatible = true;
+    isTaskCompatible = false;
+
+  }
 
   /**
    * Creates a new AndroidNonvisibleComponent.
    *
-   * @param container the container that this component will be placed in
+   * @param container that this component will be placed in
    */
   protected AndroidNonvisibleComponent(ComponentContainer container) {
     this.container = container;
