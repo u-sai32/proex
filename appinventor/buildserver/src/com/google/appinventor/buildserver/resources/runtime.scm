@@ -774,17 +774,17 @@
 
 (define-syntax define-task
   (syntax-rules ()
-    ((_ class-name task-name)
-     (define-task-internal class-name task-name 'com.google.appinventor.components.runtime.Task #f))))
+    ((_ class-name task-name task-type)
+     (define-task-internal class-name task-name 'com.google.appinventor.components.runtime.Task #f task-type))))
 
 (define-syntax define-repl-task
   (syntax-rules ()
     ((_ class-name task-name)
-     (define-task-internal class-name task-name 'com.google.appinventor.components.runtime.ReplTask #t))))
+     (define-task-internal class-name task-name 'com.google.appinventor.components.runtime.ReplTask #t 0))))
 
 (define-syntax define-task-internal
   (syntax-rules ()
-    ((_ class-name task-name subclass-name isrepl)
+    ((_ class-name task-name subclass-name isrepl task-type)
      (begin
        (module-extends subclass-name)
        (module-name class-name)
@@ -958,8 +958,8 @@
        ;; Initializes components properties
        ;; Calls Initialize() of Task and components
        (define ($Initialize) :: void
-         (android-log-task (format #f "~A.$Initialize() is called" (get-current-context-name)))
          (when isrepl
+           (android-log-task (format #f "~A.$Initialize() is called" (get-current-context-name)))
            (let ((task-do-after-creation (lookup-in-context-init-thunk-environment (get-current-context-symbol)
                                                                                    '$task-do-after-creation '())))
                 (for-each force (reverse task-do-after-creation)))
@@ -977,6 +977,12 @@
                                 (lookup-in-current-context-environment component-name)))
                        component-names))))
 
+       ;; Task Type
+       (define ($TaskType) :: void
+         ((this):TaskType task-type))
+
+
+       ;; Initializes
        ;; This defines the Simple Task's abstract $define method. The Simple Task
        ;; implementation will call this to cause initialization.
        (define ($define) :: void

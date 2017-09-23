@@ -181,19 +181,20 @@ Blockly.Yail.getFormYail = function(formJson, packageName, forRepl, workspace) {
 /**
  * Generate the Yail code for this blocks workspace, given its associated form specification.
  *
- * @param {String} formJson JSON string describing the contents of the task. This is the JSON
+ * @param {String} taskJson JSON string describing the contents of the task. This is the JSON
  *    content from the ".tsk" file for this task.
  * @param {String} packageName the name of the package (to put in the define-form call)
  * @param {Boolean} forRepl  true if the code is being generated for the REPL, false if for an apk
  * @param {Blockly.WorkspaceSvg} workspace Workspace to use for generating code.
  * @returns {String} the generated code if there were no errors.
  */
-Blockly.Yail.getTaskYail = function(formJson, packageName, forRepl, workspace) {
-  var jsonObject = JSON.parse(formJson);
+Blockly.Yail.getTaskYail = function(taskJson, packageName, forRepl, workspace) {
+  var jsonObject = JSON.parse(taskJson);
   // TODO: check for JSON parse error
   var componentNames = [];
   var taskProperties;
   var taskName;
+  var taskType;
   var code = [];
   var propertyNameConverter = function(input) {
     return input;
@@ -201,6 +202,7 @@ Blockly.Yail.getTaskYail = function(formJson, packageName, forRepl, workspace) {
   if (jsonObject.Properties) {
     taskProperties = jsonObject.Properties;
     taskName = taskProperties.$Name;
+    taskType = taskProperties.TaskType;
   } else {
     throw "Cannot find task properties";
   }
@@ -209,7 +211,7 @@ Blockly.Yail.getTaskYail = function(formJson, packageName, forRepl, workspace) {
   }
 
   if (!forRepl) {
-    code.push(Blockly.Yail.getTaskYailPrelude(packageName, taskName));
+    code.push(Blockly.Yail.getTaskYailPrelude(packageName, taskName, taskType));
   }
 
   var componentMap = workspace.buildComponentMap([], [], false, false);
@@ -295,13 +297,15 @@ Blockly.Yail.getFormYailPrelude = function(packageName, formName) {
  * @returns {String} Yail code
  * @private
 */
-Blockly.Yail.getTaskYailPrelude = function(packageName, taskName) {
+Blockly.Yail.getTaskYailPrelude = function(packageName, taskName, taskType) {
  return "#|\n$Source $Yail\n|#\n\n"
      + "(require <com.google.youngandroid.runtime>)\n"
      + Blockly.Yail.YAIL_DEFINE_TASK
      + packageName
      + Blockly.Yail.YAIL_SPACER
      + taskName
+     + Blockly.Yail.YAIL_SPACER
+     + taskType
      + Blockly.Yail.YAIL_CLOSE_BLOCK;
 }
 
@@ -512,7 +516,6 @@ Blockly.Yail.getTaskPropertiesLines = function(taskName, componentJson, includeC
   if (includeComments) {
     code.push(Blockly.Yail.YAIL_COMMENT_MAJOR + taskName + Blockly.Yail.YAIL_LINE_FEED);
   }
-  // TODO (justtus) : if we place register-task outside will we work on compiled apks?
   var registerTask = Blockly.Yail.YAIL_REGISTER_TASK + Blockly.Yail.YAIL_QUOTE + taskName
     + Blockly.Yail.YAIL_CLOSE_BLOCK + Blockly.Yail.YAIL_LINE_FEED;
   var doAfterCreation = Blockly.Yail.YAIL_DO_AFTER_TASK_CREATION + taskName + Blockly.Yail.YAIL_SPACER

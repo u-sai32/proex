@@ -12,6 +12,7 @@ import android.content.IntentFilter;
 import android.os.Handler;
 
 import android.content.Intent;
+import android.os.PowerManager;
 import android.support.v4.content.LocalBroadcastManager;
 import android.util.Log;
 import com.google.appinventor.components.runtime.util.EclairUtil;
@@ -60,6 +61,12 @@ public class ReplTask extends Task {
     replNotification = new TaskNotification("ReplTask", this);
     replNotification.setContentTitle("MIT AI2 Companion");
     replNotification.setContentText("Live Development");
+    // Always Create and acquire a Wakelock for ReplTask
+    if (this.wakeLock == null) {
+      PowerManager powerManager = (PowerManager) getSystemService(POWER_SERVICE);
+      this.wakeLock = powerManager.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, WAKELOCK_TAG);
+      this.wakeLock.acquire();
+    }
   }
 
   @Override
@@ -74,8 +81,6 @@ public class ReplTask extends Task {
     }
     onStartTask(intent, startId);
     // ReplTask is always essentially a Sticky Screen Task
-    // We return NOT_STICKY here because the OS restarts us a
-    // and we don't want that.
     return START_NOT_STICKY;
   }
 
@@ -152,6 +157,11 @@ public class ReplTask extends Task {
     clearAllTasks();
     LocalBroadcastManager.getInstance(this).unregisterReceiver(broadcastReceiver);
     replNotification.hideNotification();
+    if (this.wakeLock != null) {
+      if (this.wakeLock.isHeld()) {
+        wakeLock.release();
+      }
+    }
   }
 
   @Override
