@@ -615,6 +615,18 @@ public interface OdeMessages extends Messages {
   @Description("For importing from a URL")
   String componentImportFromURL();
 
+  @DefaultMessage("The component database in the project \"{0}\" is corrupt.")
+  @Description("Error message when the component database is not valid.")
+  String componentDatabaseCorrupt(String projectName);
+
+  @DefaultMessage("The extension description of \"{0}\" in the project \"{1}\" is corrupt.")
+  @Description("Error message when the component descriptors for an extension are not parsable.")
+  String extensionDescriptorCorrupt(String extensionName, String projectName);
+
+  @DefaultMessage("The project \"{0}\" contains an invalid extension. App Inventor will attempt to continue.")
+  @Description("Error message when an extension descriptor pathname does not have the correct structure.")
+  String invalidExtensionInProject(String projectName);
+
   //Connect
   @DefaultMessage("Connect")
   @Description("Label of the button leading to Connect related cascade items")
@@ -6218,10 +6230,6 @@ public interface OdeMessages extends Messages {
   @DefaultMessage("Welcome to App Inventor!")
   @Description("")
   String createWelcomeDialogText();
-
-  @DefaultMessage("<h2>This is the Splash Screen. Make this an iframe to your splash screen.</h2>")
-  @Description("")
-  String createWelcomeDialogMessage();
 
   @DefaultMessage("Continue")
   @Description("")
