@@ -1402,6 +1402,11 @@ public interface OdeMessages extends Messages {
   @Description("Label to indicate the application has too many screens.")
   String formCountErrorLabel();
 
+  @DefaultMessage("WARNING: The number of tasks in this app might exceed the limits of App Inventor. " +
+                  "<p>Do you really want to add another task?</p>")
+  @Description("Label to indicate the application has too many tasks.")
+  String taskCountErrorLabel();
+
   @DefaultMessage("Screen names can contain only letters, numbers, and underscores and must " +
       "start with a letter")
   @Description("Error message when form name contains non-alphanumeric characters besides _")

@@ -133,7 +133,7 @@ public final class AddTaskCommand extends ChainableCommand {
       taskCount = taskCount + 1;
       if (taskCount > MAX_TASK_COUNT) {
         HorizontalPanel errorPanel = new HorizontalPanel();
-        HTML tooManyTasksLabel = new HTML(MESSAGES.formCountErrorLabel());
+        HTML tooManyTasksLabel = new HTML(MESSAGES.taskCountErrorLabel());
         errorPanel.add(tooManyTasksLabel);
         errorPanel.setSize("100%", "24px");
         contentPanel.add(errorPanel);
