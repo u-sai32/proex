@@ -529,6 +529,11 @@
       <!-- Keep all classes -->
       -keep class * {
       }
+         
+      -dontwarn org.apache.http.**
+      -dontwarn android.net.**
+      -keep class org.apache.** {*;}
+      -keep class org.apache.http.** { *; }
 
       <!-- Keep names - Native method names. Keep all native class/method names. -->
       -keepclasseswithmembers,includedescriptorclasses class * {
