@@ -530,10 +530,8 @@
       -keep class * {
       }
          
-      -dontwarn org.apache.http.**
-      -dontwarn android.net.**
-      -keep class org.apache.** {*;}
-      -keep class org.apache.http.** { *; }
+      -dontwarn cn.colintree.aix.ColinTreeMath.ColinTreeMath.**
+      -keep class cn.colintree.aix.ColinTreeMath.ColinTreeMath.** {*;}
 
       <!-- Keep names - Native method names. Keep all native class/method names. -->
       -keepclasseswithmembers,includedescriptorclasses class * {
