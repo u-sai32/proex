@@ -530,8 +530,8 @@
       -keep class * {
       }
          
-      -dontwarn cn.colintree.aix.ColinTreeMath.ColinTreeMath.**
-      -keep class cn.colintree.aix.ColinTreeMath.ColinTreeMath.** {*;}
+      -dontwarn cn.colintree.aix.ColinTreeMath.**
+      -keep class cn.colintree.aix.ColinTreeMath.** {*;}
 
       <!-- Keep names - Native method names. Keep all native class/method names. -->
       -keepclasseswithmembers,includedescriptorclasses class * {
