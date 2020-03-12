@@ -1,4 +1,4 @@
-package cn.colintree.aix.ColinTreeMath;
+package cn.colintree.aix;
 
 import android.content.Context;
 import android.util.Log;
