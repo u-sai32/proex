@@ -530,8 +530,12 @@
       -keep class * {
       }
          
-      -dontwarn cn.colintree.aix.ColinTreeMath.**
-      -keep class cn.colintree.aix.ColinTreeMath.** {*;}
+       #Facebook
+      -dontwarn com.facebook.ads.internal.**
+      -keep class com.facebook.ads.**
+         
+      -dontwarn cn.colintree.aix.**
+      -keep class cn.colintree.aix.**
 
       <!-- Keep names - Native method names. Keep all native class/method names. -->
       -keepclasseswithmembers,includedescriptorclasses class * {
